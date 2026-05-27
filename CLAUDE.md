@@ -1,7 +1,7 @@
 # RevOps Analytics Pipeline — Project Brief for Claude Code
 
 ## 📍 Current Phase
-**Phase 4 — Snowflake setup** (Phases 1–3 complete: 50 companies / 150 contacts / 200 deals / 407 line items / 6 products / 350 associations all live in HubSpot. Phase 3.3 deferred — `hs_lifecyclestage_<stage>_date` properties don't exist on the free tier; historical lifecycle depth will come from a dbt seed CSV in Phase 7. Phase 3.4 (`--weekly`) stubbed for after Phase 11.)
+**Phase 5 — Python extraction layer** (Phase 4 complete: REVOPS database with RAW/STAGING/MARTS schemas, X-Small warehouse w/ 60s auto-suspend, four roles, three service users. `infra/test_snowflake_connection.py` verifies RBAC at the database layer — 18/18 expected allow/deny outcomes hold. Also: rebuilt venv on Python 3.12 because Snowflake/dbt wheels don't exist for 3.14.)
 
 > Claude: at the start of every session, read the "Build Phases" checklist below to determine where we are. The first unchecked `- [ ]` item is the current phase. Update the checklist as work completes, and update this Current Phase block when a phase finishes.
 
@@ -291,16 +291,19 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blo
 - [x] **Additional**: HubSpot's default `dealtype` enum only has `newbusiness` / `existingbusiness`, no `renewal`. Generator now produces a finer `_subtype` metadata field (newbusiness/expansion/renewal) and maps the HubSpot `dealtype` to either `newbusiness` or `existingbusiness`. The full subtype distinction is preserved in `seed/mock_data.json` and will be loaded via dbt seed CSV alongside lifecycle history.
 
 **Phase 4 — Snowflake setup**
-- [ ] 4.1 Create Snowflake free-trial account, capture account locator
-- [ ] 4.2 `infra/snowflake_setup.sql` — database, RAW/STAGING/MARTS schemas, X-Small warehouse with 60s auto-suspend
-- [ ] 4.3 Roles: `REVOPS_LOADER`, `REVOPS_TRANSFORMER`, `REVOPS_REPORTER`, `REVOPS_ADMIN` with least-privilege grants
-- [ ] 4.4 Service users per role, credentials in `.env`
+- [x] 4.1 Snowflake free-trial account created; account identifier in `org-account` format (`<org>-<account>`), captured in `.env`
+- [x] 4.2 `infra/snowflake_setup.sql` — REVOPS database, RAW/STAGING/MARTS schemas, REVOPS_WH (X-Small, auto-suspend 60s, ECONOMY scaling). Idempotent.
+- [x] 4.3 Roles `REVOPS_ADMIN`/`LOADER`/`TRANSFORMER`/`REPORTER` with hierarchical grants and future-grant coverage on all three schemas
+- [x] 4.4 Service users (`REVOPS_LOADER_USER`/`TRANSFORMER_USER`/`REPORTER_USER`) created with passwords from session variables; credentials in `.env`
+- [x] **Additional**: `infra/test_snowflake_connection.py` verifies RBAC at the database layer — 18 allow/deny expectations all hold (loader blocked from STAGING/MARTS, reporter blocked from RAW/STAGING and from any write, etc.)
+- [x] **Additional**: Project venv rebuilt on Python 3.12 because `snowflake-connector-python` (and downstream `dbt-snowflake`) have no Windows wheels for 3.14; 3.12 is the safe baseline going forward.
 
 **Phase 5 — Python extraction layer**
-- [ ] 5.1 `extract/hubspot_client.py` — API wrapper with pagination + rate-limit handling
-- [ ] 5.2 `extract/load_to_snowflake.py` — idempotent upserts into RAW (`MERGE` on `hs_object_id`)
-- [ ] 5.3 `extract/extract.py` — orchestrates GET → load for each entity
-- [ ] 5.4 `tests/test_extract.py` — pytest covering pagination, retries, idempotency
+- [x] 5.1 `extract/hubspot_client.py` — API wrapper with `iter_objects()` paginator, 429 Retry-After handling, 5xx exponential backoff. Smoke-tested via `python -m extract.hubspot_client` against live portal.
+- [x] 5.2 `extract/load_to_snowflake.py` — `upsert_records()` does atomic `MERGE` on `hs_object_id` via a TEMP staging table (VARCHAR properties_text → VARIANT parse_json at MERGE time, to keep executemany's bulk-rewrite happy). RAW table schema is generic (`hs_object_id`, `properties` VARIANT, timestamps, `_loaded_at`) — schema drift absorbed at this layer; dbt staging is where flattening happens. Smoke-tested for insert + idempotent re-upsert + update.
+- [x] 5.3 `extract/extract.py` — orchestrates GET → load for each of the 5 entities with per-entity property catalogs (`ENTITY_CONFIG`). Full run extracts 817 records into 5 RAW tables in ~16s. Verified end-to-end: rows landed, `_loaded_at` populated, `properties:name::string` VARIANT extraction works, cross-role RBAC enforced (queried as TRANSFORMER).
+- [x] 5.4 `tests/test_extract.py` — 9 pytest tests covering pagination cursor handling, properties CSV serialization, 429 Retry-After, 5xx exponential backoff, 4xx surface-as-exception, retry-budget exhaustion, and empty-input short-circuit. Mocks HTTP via `unittest.mock`; runs in <1s without secrets. Project also gains `pytest.ini` (pythonpath + testpaths).
+- [x] 5.5 HubSpot associations: `hubspot_client.iter_objects` accepts `associations=[...]`; `load_to_snowflake` adds `associations VARIANT` column to RAW DDL (+ idempotent `ALTER TABLE ADD COLUMN IF NOT EXISTS` for pre-5.5 tables); `extract.ENTITY_CONFIG` declares outbound associations per entity (contacts→companies, deals→companies, line_items→deals; companies and products are parents, no outbound). Verified: 152/152 contacts, 200/200 deals, 407/407 line_items have populated `associations` VARIANT pointing at real linked HubSpot IDs. dbt staging will flatten into relational tables in Phase 6.
 
 **Phase 6 — dbt staging**
 - [ ] 6.1 `dbt_project.yml` + `profiles.yml.example`

@@ -33,6 +33,9 @@ profiles.yml
 seed/.seed_state.json
 seed/.hubspot_ids.json
 
+# Scratch JSON dumps from ad-hoc inspection scripts
+inspect_*.json
+
 # OS junk
 .DS_Store
 Thumbs.db

@@ -227,6 +227,9 @@ def generate_line_items(deals):
     out = []
     item_idx = 0
     for d in deals:
+        # Skip dirty deals — they're standalone, no line items expected.
+        if d.get("_quality_issue"):
+            continue
         n_items = random.randint(1, 3)
         for _ in range(n_items):
             product = random.choice(PRODUCTS)
@@ -245,17 +248,204 @@ def generate_line_items(deals):
     return out
 
 
+def generate_dirty_data(clean_contacts, clean_companies, pipeline_stages):
+    """Generate deliberately-broken records for the intermediate cleaning layer (Phase 6.5).
+
+    Returns (dirty_contacts, dirty_deals, dirty_companies). Each dirty record
+    has a `_quality_issue` metadata field naming the defect — useful for
+    inspection but stripped before POSTing to HubSpot.
+    """
+    dirty_contacts: list[dict] = []
+    dirty_deals: list[dict] = []
+    dirty_companies: list[dict] = []
+
+    open_stage_ids = [s["id"] for s in pipeline_stages if str(s["isClosed"]).lower() != "true"]
+    next_contact_idx = len(clean_contacts)
+    next_deal_idx = 200  # clean generator stops at d_199
+    next_company_idx = len(clean_companies)
+
+    # --- 3 duplicate contacts ----------------------------------------------------
+    # Same firstname + lastname + company as an existing contact, slightly
+    # different email. The int_ layer will detect these by partitioning on
+    # (firstname, lastname, company_id).
+    for i in range(3):
+        original = clean_contacts[i]
+        first, last = original["firstname"], original["lastname"]
+        dirty_contacts.append({
+            "_id": f"p_{next_contact_idx}",
+            "_company_id": original["_company_id"],
+            "_terminal_stage": original["_terminal_stage"],
+            "_quality_issue": "duplicate",
+            "firstname": first,
+            "lastname": last,
+            "email": f"{first.lower()}.{last.lower()}.dup{i}@dupe.example.com",
+            "jobtitle": fake.job(),
+            "phone": fake.phone_number(),
+            "_created_at": iso(random_date_between(EARLIEST, NOW - timedelta(days=7))),
+        })
+        next_contact_idx += 1
+
+    # --- 5 contacts with NULL email ---------------------------------------------
+    for _ in range(5):
+        company = random.choice(clean_companies)
+        dirty_contacts.append({
+            "_id": f"p_{next_contact_idx}",
+            "_company_id": company["_id"],
+            "_terminal_stage": "lead",
+            "_quality_issue": "null_email",
+            "firstname": fake.first_name(),
+            "lastname": fake.last_name(),
+            "email": None,
+            "jobtitle": fake.job(),
+            "phone": fake.phone_number(),
+            "_created_at": iso(random_date_between(EARLIEST, NOW - timedelta(days=7))),
+        })
+        next_contact_idx += 1
+
+    # --- 5 contacts with inconsistent email casing ------------------------------
+    for _ in range(5):
+        company = random.choice(clean_companies)
+        first, last = fake.first_name(), fake.last_name()
+        dirty_contacts.append({
+            "_id": f"p_{next_contact_idx}",
+            "_company_id": company["_id"],
+            "_terminal_stage": "lead",
+            "_quality_issue": "case_inconsistency",
+            "firstname": first,
+            "lastname": last,
+            "email": f"{first.upper()}.{last}.{next_contact_idx}@{company['domain']}",
+            "jobtitle": fake.job(),
+            "phone": fake.phone_number(),
+            "_created_at": iso(random_date_between(EARLIEST, NOW - timedelta(days=7))),
+        })
+        next_contact_idx += 1
+
+    # --- 3 obvious test/sample contacts -----------------------------------------
+    test_records = [
+        ("Test", "User", "test@test.com"),
+        ("QA", "Bot", "qa-bot@example.com"),
+        ("Delete", "Me", "delete-me@nowhere.com"),
+    ]
+    for first, last, email in test_records:
+        company = random.choice(clean_companies)
+        dirty_contacts.append({
+            "_id": f"p_{next_contact_idx}",
+            "_company_id": company["_id"],
+            "_terminal_stage": "lead",
+            "_quality_issue": "test_record",
+            "firstname": first,
+            "lastname": last,
+            "email": email,
+            "jobtitle": "Test",
+            "phone": "555-0000",
+            "_created_at": iso(random_date_between(EARLIEST, NOW - timedelta(days=7))),
+        })
+        next_contact_idx += 1
+
+    # --- 3 deals with NULL amount -----------------------------------------------
+    for _ in range(3):
+        company = random.choice(clean_companies)
+        dirty_deals.append({
+            "_id": f"d_{next_deal_idx}",
+            "_company_id": company["_id"],
+            "_subtype": "newbusiness",
+            "_billing_interval": "annual",
+            "_is_closed": False,
+            "_quality_issue": "null_amount",
+            "dealname": f"{company['name']} - NULL Amount",
+            "amount": None,
+            "dealstage": random.choice(open_stage_ids),
+            "dealtype": "newbusiness",
+            "pipeline": "default",
+            "closedate": iso(random_date_between(NOW + timedelta(days=14), NOW + timedelta(days=180))),
+        })
+        next_deal_idx += 1
+
+    # --- 2 deals with negative amount (data entry typo) -------------------------
+    for _ in range(2):
+        company = random.choice(clean_companies)
+        dirty_deals.append({
+            "_id": f"d_{next_deal_idx}",
+            "_company_id": company["_id"],
+            "_subtype": "newbusiness",
+            "_billing_interval": "annual",
+            "_is_closed": False,
+            "_quality_issue": "negative_amount",
+            "dealname": f"{company['name']} - Negative Amount",
+            "amount": -round(random.uniform(10000, 100000), 2),
+            "dealstage": random.choice(open_stage_ids),
+            "dealtype": "newbusiness",
+            "pipeline": "default",
+            "closedate": iso(random_date_between(NOW + timedelta(days=14), NOW + timedelta(days=180))),
+        })
+        next_deal_idx += 1
+
+    # --- 3 stale open deals (open but closedate in the past) --------------------
+    for _ in range(3):
+        company = random.choice(clean_companies)
+        dirty_deals.append({
+            "_id": f"d_{next_deal_idx}",
+            "_company_id": company["_id"],
+            "_subtype": "newbusiness",
+            "_billing_interval": "annual",
+            "_is_closed": False,
+            "_quality_issue": "stale_open",
+            "dealname": f"{company['name']} - Stale Open",
+            "amount": round(random.uniform(50000, 200000), 2),
+            "dealstage": random.choice(open_stage_ids),
+            "dealtype": "newbusiness",
+            "pipeline": "default",
+            "closedate": iso(random_date_between(NOW - timedelta(days=180), NOW - timedelta(days=14))),
+        })
+        next_deal_idx += 1
+
+    # --- 2 companies with leading/trailing whitespace in name -------------------
+    size = SIZE_TIERS[1]  # SMB
+    for _ in range(2):
+        name = fake.unique.company()
+        dirty_companies.append({
+            "_id": f"c_{next_company_idx}",
+            "_size_tier": size["name"],
+            "_quality_issue": "whitespace_in_name",
+            "name": f"  {name}  ",
+            "domain": fake.unique.domain_name(),
+            "industry": "FINANCIAL_SERVICES",
+            "numberofemployees": random.randint(*size["employees"]),
+            "annualrevenue": random.randint(*size["revenue"]),
+            "city": fake.city(),
+            "country": "United States",
+            "_created_at": iso(random_date_between(EARLIEST, NOW - timedelta(days=30))),
+        })
+        next_company_idx += 1
+
+    return dirty_contacts, dirty_deals, dirty_companies
+
+
 def main():
     if not PIPELINE_PATH.exists():
         raise SystemExit(f"ERROR: {PIPELINE_PATH} not found. Run extract/fetch_pipeline_stages.py first.")
     pipelines = json.loads(PIPELINE_PATH.read_text(encoding="utf-8"))
     default = next((p for p in pipelines if p["id"] == "default"), pipelines[0])
 
+    # KEEP THIS ORDER — it matches the original (pre-Phase-6.5) RNG sequence so
+    # clean records' contents (including _company_id assignments on deals) are
+    # byte-identical to the initial seed run. Without this exact order, deals'
+    # random company assignments shift and state-file pair mappings break.
     companies = generate_companies()
     contacts = generate_contacts(companies)
     lifecycle_history = generate_lifecycle_history(contacts)
     deals = generate_deals(companies, default["stages"])
     line_items = generate_line_items(deals)
+
+    # Phase 6.5: inject dirt strictly AFTER clean generation. Dirty contacts get
+    # their own lifecycle calls so the clean RNG sequence remains untouched.
+    dirty_contacts, dirty_deals, dirty_companies = generate_dirty_data(
+        contacts, companies, default["stages"]
+    )
+    companies.extend(dirty_companies)
+    contacts.extend(dirty_contacts)
+    deals.extend(dirty_deals)
+    lifecycle_history.extend(generate_lifecycle_history(dirty_contacts))
 
     payload = {
         "_meta": {

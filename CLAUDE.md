@@ -1,7 +1,7 @@
 # RevOps Analytics Pipeline — Project Brief for Claude Code
 
 ## 📍 Current Phase
-**Phase 5 — Python extraction layer** (Phase 4 complete: REVOPS database with RAW/STAGING/MARTS schemas, X-Small warehouse w/ 60s auto-suspend, four roles, three service users. `infra/test_snowflake_connection.py` verifies RBAC at the database layer — 18/18 expected allow/deny outcomes hold. Also: rebuilt venv on Python 3.12 because Snowflake/dbt wheels don't exist for 3.14.)
+**Phase 6 — dbt staging + intermediate** (Phases 1–5 complete + 6.1/6.2/6.3/6.5 done. On 6.4 — staging/intermediate YAML docs + PK tests. After 6.4, Phase 6 closes and Phase 7 starts marts.)
 
 > Claude: at the start of every session, read the "Build Phases" checklist below to determine where we are. The first unchecked `- [ ]` item is the current phase. Update the checklist as work completes, and update this Current Phase block when a phase finishes.
 
@@ -276,19 +276,20 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blo
 - [x] 1.3 Fetch and record deal pipeline stage IDs (`GET /crm/v3/pipelines/deals`) — saved to `infra/hubspot_pipeline_stages.json`
 - [x] 1.4 Create custom Company properties for Reverse ETL (`arr_usd`, `account_health_score`, `open_pipeline_usd`, `last_synced_from_warehouse`) via `reverse_etl/setup_hubspot_properties.py` — grouped under "RevOps Analytics" property group
 
-**Phase 2 — Mock data generation** ✅ all generated to `seed/mock_data.json`, deterministic via seeded RNG
+**Phase 2 — Mock data generation** ✅ all generated to `seed/mock_data.json`, deterministic via seeded RNG. Includes both a clean baseline (813 records) and a deliberately-broken layer (26 records) so the intermediate cleaning layer in Phase 6 has realistic dirt to operate on.
 - [x] 2.1 `seed/generate_mock_data.py` — 50 companies across 3 size tiers (Startup/SMB/Enterprise) with correlated employee count, revenue, deal-value range
 - [x] 2.2 150 contacts with terminal `lifecyclestage` drawn from funnel weights (50/25/12/10/3)
 - [x] 2.3 200 deals: 70% New Business / 20% Expansion / 10% Renewal; 70% Annual / 30% Monthly; 60% open / 40% closed (60% won of closed)
 - [x] 2.4 407 line items (1–3 per deal) across 6 product SKUs
 - [x] 2.5 293 lifecycle history events — each contact walked from `lead` to their terminal stage with backdated timestamps (HubSpot's 5-stage default; SQO ≡ Opportunity)
+- [x] 2.6 `generate_dirty_data()` injects realistic data-quality issues alongside the clean records (26 total, appended so internal `_id`s remain stable): 3 duplicate contact pairs (same name+company, different email), 5 NULL-email contacts, 5 case-inconsistent emails, 3 obvious test contacts (`test@test.com`, `qa-bot@example.com`, `delete-me@nowhere.com`), 3 deals with NULL amount, 2 deals with negative amount, 3 stale open deals (open stage + past close_date), 2 companies with whitespace in name. Each dirty record carries a `_quality_issue` metadata field for inspection.
 
 **Phase 3 — HubSpot seeding**
-- [x] 3.1 `seed/seed_hubspot.py` POSTs entities in correct dependency order (products → companies → contacts → contact↔company associations → deals → deal↔company associations → line items with embedded deal associations). Line items must be created with their parent association — HubSpot rejects standalone line items.
+- [x] 3.1 `seed/seed_hubspot.py` POSTs entities in correct dependency order (products → companies → contacts → contact↔company associations → deals → deal↔company associations → line items with embedded deal associations). Line items must be created with their parent association — HubSpot rejects standalone line items. Both clean and dirty (Phase 2.6) records flow through the same path. `strip_meta()` drops `None` values before POSTing so HubSpot accepts records with intentionally missing fields (NULL-email contacts, NULL-amount deals).
 - [x] 3.2 Idempotent: `seed/.hubspot_ids.json` state file maps internal `_id` → HubSpot `hs_object_id` per entity type; reruns skip anything already in state
 - [!] 3.3 Lifecycle stage backdating: blocked. The `hs_lifecyclestage_<stage>_date` system properties don't exist on this free portal (and walking a throwaway contact through stages does NOT trigger their auto-creation as docs suggested — they may be a paid Marketing Hub feature). Workaround: load the generated `lifecycle_history` events directly into Snowflake via a dbt seed CSV in Phase 7. HubSpot will reflect only each contact's current terminal stage; historical depth lives in the warehouse.
 - [ ] 3.4 `--weekly` flag stubbed (raises `NotImplementedError`); revisit after Phase 11 (GitHub Actions weekly_seed.yml)
-- [x] **Additional**: HubSpot's default `dealtype` enum only has `newbusiness` / `existingbusiness`, no `renewal`. Generator now produces a finer `_subtype` metadata field (newbusiness/expansion/renewal) and maps the HubSpot `dealtype` to either `newbusiness` or `existingbusiness`. The full subtype distinction is preserved in `seed/mock_data.json` and will be loaded via dbt seed CSV alongside lifecycle history.
+- [x] **HubSpot quirks discovered during seeding** — (a) Default `dealtype` enum only has `newbusiness` / `existingbusiness`, no `renewal`; generator emits a finer `_subtype` metadata field (newbusiness/expansion/renewal) and maps the HubSpot `dealtype` to either `newbusiness` or `existingbusiness`. The full subtype distinction is preserved in `seed/mock_data.json` and will be loaded via dbt seed CSV alongside lifecycle history. (b) HubSpot silently lowercases emails on storage, so case-inconsistency dirt from Phase 2.6 gets sanitized by the platform before extraction — real-world lesson that some platforms clean for you. (c) HubSpot auto-creates Company records when contact emails arrive on previously-unseen domains, adding ~3 shell companies (one each for the test contacts' domains plus the dupe domain) — additional realistic dirt the int_ layer handles via the "stub company" filter (NULL industry+employees+revenue).
 
 **Phase 4 — Snowflake setup**
 - [x] 4.1 Snowflake free-trial account created; account identifier in `org-account` format (`<org>-<account>`), captured in `.env`
@@ -305,11 +306,20 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blo
 - [x] 5.4 `tests/test_extract.py` — 9 pytest tests covering pagination cursor handling, properties CSV serialization, 429 Retry-After, 5xx exponential backoff, 4xx surface-as-exception, retry-budget exhaustion, and empty-input short-circuit. Mocks HTTP via `unittest.mock`; runs in <1s without secrets. Project also gains `pytest.ini` (pythonpath + testpaths).
 - [x] 5.5 HubSpot associations: `hubspot_client.iter_objects` accepts `associations=[...]`; `load_to_snowflake` adds `associations VARIANT` column to RAW DDL (+ idempotent `ALTER TABLE ADD COLUMN IF NOT EXISTS` for pre-5.5 tables); `extract.ENTITY_CONFIG` declares outbound associations per entity (contacts→companies, deals→companies, line_items→deals; companies and products are parents, no outbound). Verified: 152/152 contacts, 200/200 deals, 407/407 line_items have populated `associations` VARIANT pointing at real linked HubSpot IDs. dbt staging will flatten into relational tables in Phase 6.
 
-**Phase 6 — dbt staging**
-- [ ] 6.1 `dbt_project.yml` + `profiles.yml.example`
-- [ ] 6.2 `models/staging/_sources.yml` with freshness SLAs on each RAW table
-- [ ] 6.3 `stg_hubspot__*.sql` for every RAW table (rename, cast, dedupe; materialized as views)
-- [ ] 6.4 `.yml` with column descriptions + `not_null`/`unique` tests on PKs
+**Phase 6 — dbt staging + intermediate**
+- [x] 6.1 dbt project scaffolding: `dbt/dbt_project.yml` (per-folder materialization + schema routing), `dbt/profiles.yml.example` (env_var-driven connection template), `dbt/macros/generate_schema_name.sql` (override so `+schema: marts` lands literally in `MARTS`, not `<target>_marts`). dbt-core 1.8.7 + dbt-snowflake 1.8.4 installed. `dbt debug` passes as REVOPS_TRANSFORMER.
+- [x] 6.2 `dbt/models/staging/_sources.yml` declares the 5 RAW.HUBSPOT_* tables as sources under namespace `hubspot`, with freshness SLA (warn @ 25h, error @ 48h) keyed off `_loaded_at`. 20 source-level data tests defined (`unique`/`not_null` on `hs_object_id`, `not_null` on `properties` and `_loaded_at`). `dbt source freshness` passes for all 5.
+- [x] 6.3 Eight staging views materialized in STAGING. Five flatten VARIANT `properties` JSON into typed columns (`stg_hubspot__{companies,contacts,deals,line_items,products}.sql`). Three flatten `associations` JSON into link tables via `lateral flatten` (`stg_hubspot__{contact_company,deal_company,line_item_deal}_links.sql`), each carrying a `link_type` column so marts can filter to primary (`contact_to_company` etc.) and avoid HubSpot's auto-discovered `_unlabeled` secondary links. `dbt run --select staging` succeeds, all 8 views produce expected row counts.
+- [ ] 6.4 `.yml` with column descriptions + `not_null`/`unique` tests on PKs (for both staging and intermediate models)
+- [x] 6.5 Intermediate cleaning layer: 8 views in `dbt/models/intermediate/`, materialized in a dedicated `INTERMEDIATE` Snowflake schema (added to `infra/snowflake_setup.sql` + grants for `REVOPS_TRANSFORMER`; `REVOPS_REPORTER` deliberately has no access — intermediate is dev-layer, not user-facing). Mirrors STAGING 1:1 so marts read uniformly from the intermediate layer (medallion-style: each layer reads only from the previous one).
+  - **`int_hubspot__contacts`** — filters NULL emails + 3 test contacts + 2 HubSpot onboarding samples, then dedups via `ROW_NUMBER` partitioned by `(first_name, last_name)`. Partition deliberately drops `company_id` because HubSpot's email-domain auto-discovery scrambles dupe contacts' primary associations.
+  - **`int_hubspot__deals`** — drops NULL/negative amounts, flags stale opens (`is_stale = TRUE`, kept for visibility).
+  - **`int_hubspot__companies`** — TRIMs names, drops the "HubSpot" default + ~4 auto-created shell companies (NULL industry+employees+revenue).
+  - **`int_hubspot__contact_company_primary`** — filters link table to `link_type = 'contact_to_company'`.
+  - **`int_hubspot__deal_company_primary`** — filters link table to `link_type = 'deal_to_company'` (no-op against current data but preserves the *_primary convention).
+  - **`int_hubspot__line_item_deal_primary`** — filters link table to `link_type = 'line_item_to_deal'` (also no-op currently).
+  - **`int_hubspot__line_items`** and **`int_hubspot__products`** — pass-through views (clean source data; no cleaning needed). Modeled at intermediate anyway so the layering stays uniform.
+  - Final cleaned counts: 155 contacts, 203 deals, 52 companies, 168 contact→company primary links, 200 deal→company, 407 line_item→deal, 407 line items, 6 products — ready for Phase 7 marts.
 
 **Phase 7 — dbt marts**
 - [ ] 7.1 `dim_accounts`, `dim_contacts`

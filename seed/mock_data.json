@@ -4,11 +4,11 @@
     "seed": 42,
     "pipeline": "default",
     "counts": {
-      "companies": 50,
-      "contacts": 150,
-      "lifecycle_events": 293,
+      "companies": 52,
+      "contacts": 166,
+      "lifecycle_events": 315,
       "products": 6,
-      "deals": 200,
+      "deals": 208,
       "line_items": 407
     }
   },
@@ -612,6 +612,32 @@
       "city": "Medinaside",
       "country": "United States",
       "_created_at": "2026-04-05T23:56:01+00:00"
+    },
+    {
+      "_id": "c_50",
+      "_size_tier": "SMB",
+      "_quality_issue": "whitespace_in_name",
+      "name": "  Morris Group  ",
+      "domain": "flores.com",
+      "industry": "FINANCIAL_SERVICES",
+      "numberofemployees": 247,
+      "annualrevenue": 16664050,
+      "city": "East Jeffreyhaven",
+      "country": "United States",
+      "_created_at": "2025-02-23T01:59:11+00:00"
+    },
+    {
+      "_id": "c_51",
+      "_size_tier": "SMB",
+      "_quality_issue": "whitespace_in_name",
+      "name": "  Finley Inc  ",
+      "domain": "cline-ayala.com",
+      "industry": "FINANCIAL_SERVICES",
+      "numberofemployees": 342,
+      "annualrevenue": 38765353,
+      "city": "Christophermouth",
+      "country": "United States",
+      "_created_at": "2026-02-12T03:02:27+00:00"
     }
   ],
   "contacts": [
@@ -2264,6 +2290,198 @@
       "jobtitle": "Designer, industrial/product",
       "phone": "370.763.2424x154",
       "_created_at": "2025-03-14T02:11:31+00:00"
+    },
+    {
+      "_id": "p_150",
+      "_company_id": "c_5",
+      "_terminal_stage": "salesqualifiedlead",
+      "_quality_issue": "duplicate",
+      "firstname": "Lauren",
+      "lastname": "Hurst",
+      "email": "lauren.hurst.dup0@dupe.example.com",
+      "jobtitle": "Diagnostic radiographer",
+      "phone": "9643361103",
+      "_created_at": "2026-02-24T05:41:35+00:00"
+    },
+    {
+      "_id": "p_151",
+      "_company_id": "c_4",
+      "_terminal_stage": "marketingqualifiedlead",
+      "_quality_issue": "duplicate",
+      "firstname": "Tina",
+      "lastname": "Ferguson",
+      "email": "tina.ferguson.dup1@dupe.example.com",
+      "jobtitle": "Consulting civil engineer",
+      "phone": "001-438-970-0516",
+      "_created_at": "2026-03-04T10:32:21+00:00"
+    },
+    {
+      "_id": "p_152",
+      "_company_id": "c_7",
+      "_terminal_stage": "opportunity",
+      "_quality_issue": "duplicate",
+      "firstname": "Mark",
+      "lastname": "Gibson",
+      "email": "mark.gibson.dup2@dupe.example.com",
+      "jobtitle": "Building services engineer",
+      "phone": "861.411.5542",
+      "_created_at": "2025-12-02T00:37:37+00:00"
+    },
+    {
+      "_id": "p_153",
+      "_company_id": "c_14",
+      "_terminal_stage": "lead",
+      "_quality_issue": "null_email",
+      "firstname": "Darlene",
+      "lastname": "Byrd",
+      "email": null,
+      "jobtitle": "Broadcast presenter",
+      "phone": "390.492.7532x69731",
+      "_created_at": "2025-02-11T15:03:34+00:00"
+    },
+    {
+      "_id": "p_154",
+      "_company_id": "c_47",
+      "_terminal_stage": "lead",
+      "_quality_issue": "null_email",
+      "firstname": "Karen",
+      "lastname": "Lawrence",
+      "email": null,
+      "jobtitle": "Music tutor",
+      "phone": "(665)223-4138x999",
+      "_created_at": "2025-07-26T04:16:15+00:00"
+    },
+    {
+      "_id": "p_155",
+      "_company_id": "c_20",
+      "_terminal_stage": "lead",
+      "_quality_issue": "null_email",
+      "firstname": "Melanie",
+      "lastname": "Barrett",
+      "email": null,
+      "jobtitle": "Illustrator",
+      "phone": "989.883.6403",
+      "_created_at": "2025-04-24T14:25:13+00:00"
+    },
+    {
+      "_id": "p_156",
+      "_company_id": "c_26",
+      "_terminal_stage": "lead",
+      "_quality_issue": "null_email",
+      "firstname": "Daniel",
+      "lastname": "Porter",
+      "email": null,
+      "jobtitle": "Therapist, music",
+      "phone": "780-455-2696",
+      "_created_at": "2025-10-20T10:53:35+00:00"
+    },
+    {
+      "_id": "p_157",
+      "_company_id": "c_5",
+      "_terminal_stage": "lead",
+      "_quality_issue": "null_email",
+      "firstname": "Kathryn",
+      "lastname": "Best",
+      "email": null,
+      "jobtitle": "Buyer, industrial",
+      "phone": "6918043006",
+      "_created_at": "2025-03-12T04:04:24+00:00"
+    },
+    {
+      "_id": "p_158",
+      "_company_id": "c_13",
+      "_terminal_stage": "lead",
+      "_quality_issue": "case_inconsistency",
+      "firstname": "Rodney",
+      "lastname": "Morales",
+      "email": "RODNEY.Morales.158@brown.com",
+      "jobtitle": "Software engineer",
+      "phone": "+1-492-741-4183",
+      "_created_at": "2026-04-02T20:37:56+00:00"
+    },
+    {
+      "_id": "p_159",
+      "_company_id": "c_26",
+      "_terminal_stage": "lead",
+      "_quality_issue": "case_inconsistency",
+      "firstname": "Peter",
+      "lastname": "Walters",
+      "email": "PETER.Walters.159@jones.net",
+      "jobtitle": "Brewing technologist",
+      "phone": "463-303-1617x9904",
+      "_created_at": "2025-12-31T22:09:57+00:00"
+    },
+    {
+      "_id": "p_160",
+      "_company_id": "c_48",
+      "_terminal_stage": "lead",
+      "_quality_issue": "case_inconsistency",
+      "firstname": "Alexander",
+      "lastname": "Taylor",
+      "email": "ALEXANDER.Taylor.160@daniels-perry.com",
+      "jobtitle": "Administrator, arts",
+      "phone": "(675)388-4252",
+      "_created_at": "2025-09-03T07:05:10+00:00"
+    },
+    {
+      "_id": "p_161",
+      "_company_id": "c_23",
+      "_terminal_stage": "lead",
+      "_quality_issue": "case_inconsistency",
+      "firstname": "Kelsey",
+      "lastname": "Johnson",
+      "email": "KELSEY.Johnson.161@york.org",
+      "jobtitle": "Pilot, airline",
+      "phone": "481-749-1778x507",
+      "_created_at": "2026-02-12T14:27:16+00:00"
+    },
+    {
+      "_id": "p_162",
+      "_company_id": "c_32",
+      "_terminal_stage": "lead",
+      "_quality_issue": "case_inconsistency",
+      "firstname": "Eric",
+      "lastname": "Ayala",
+      "email": "ERIC.Ayala.162@dickson-brady.com",
+      "jobtitle": "Teacher, secondary school",
+      "phone": "+1-213-880-0030x75622",
+      "_created_at": "2026-01-27T20:44:42+00:00"
+    },
+    {
+      "_id": "p_163",
+      "_company_id": "c_4",
+      "_terminal_stage": "lead",
+      "_quality_issue": "test_record",
+      "firstname": "Test",
+      "lastname": "User",
+      "email": "test@test.com",
+      "jobtitle": "Test",
+      "phone": "555-0000",
+      "_created_at": "2025-05-16T19:53:11+00:00"
+    },
+    {
+      "_id": "p_164",
+      "_company_id": "c_32",
+      "_terminal_stage": "lead",
+      "_quality_issue": "test_record",
+      "firstname": "QA",
+      "lastname": "Bot",
+      "email": "qa-bot@example.com",
+      "jobtitle": "Test",
+      "phone": "555-0000",
+      "_created_at": "2025-07-05T00:06:09+00:00"
+    },
+    {
+      "_id": "p_165",
+      "_company_id": "c_49",
+      "_terminal_stage": "lead",
+      "_quality_issue": "test_record",
+      "firstname": "Delete",
+      "lastname": "Me",
+      "email": "delete-me@nowhere.com",
+      "jobtitle": "Test",
+      "phone": "555-0000",
+      "_created_at": "2026-02-28T17:46:12+00:00"
     }
   ],
   "lifecycle_history": [
@@ -3731,6 +3949,116 @@
       "_contact_id": "p_149",
       "stage": "marketingqualifiedlead",
       "entered_at": "2026-05-01T00:00:00+00:00"
+    },
+    {
+      "_contact_id": "p_150",
+      "stage": "lead",
+      "entered_at": "2026-02-24T05:41:35+00:00"
+    },
+    {
+      "_contact_id": "p_150",
+      "stage": "marketingqualifiedlead",
+      "entered_at": "2026-03-31T14:50:47+00:00"
+    },
+    {
+      "_contact_id": "p_150",
+      "stage": "salesqualifiedlead",
+      "entered_at": "2026-05-06T00:00:00+00:00"
+    },
+    {
+      "_contact_id": "p_151",
+      "stage": "lead",
+      "entered_at": "2026-03-04T10:32:21+00:00"
+    },
+    {
+      "_contact_id": "p_151",
+      "stage": "marketingqualifiedlead",
+      "entered_at": "2026-05-19T00:00:00+00:00"
+    },
+    {
+      "_contact_id": "p_152",
+      "stage": "lead",
+      "entered_at": "2025-12-02T00:37:37+00:00"
+    },
+    {
+      "_contact_id": "p_152",
+      "stage": "marketingqualifiedlead",
+      "entered_at": "2026-01-22T08:25:04+00:00"
+    },
+    {
+      "_contact_id": "p_152",
+      "stage": "salesqualifiedlead",
+      "entered_at": "2026-03-14T16:12:32+00:00"
+    },
+    {
+      "_contact_id": "p_152",
+      "stage": "opportunity",
+      "entered_at": "2026-05-05T00:00:00+00:00"
+    },
+    {
+      "_contact_id": "p_153",
+      "stage": "lead",
+      "entered_at": "2025-02-11T15:03:34+00:00"
+    },
+    {
+      "_contact_id": "p_154",
+      "stage": "lead",
+      "entered_at": "2025-07-26T04:16:15+00:00"
+    },
+    {
+      "_contact_id": "p_155",
+      "stage": "lead",
+      "entered_at": "2025-04-24T14:25:13+00:00"
+    },
+    {
+      "_contact_id": "p_156",
+      "stage": "lead",
+      "entered_at": "2025-10-20T10:53:35+00:00"
+    },
+    {
+      "_contact_id": "p_157",
+      "stage": "lead",
+      "entered_at": "2025-03-12T04:04:24+00:00"
+    },
+    {
+      "_contact_id": "p_158",
+      "stage": "lead",
+      "entered_at": "2026-04-02T20:37:56+00:00"
+    },
+    {
+      "_contact_id": "p_159",
+      "stage": "lead",
+      "entered_at": "2025-12-31T22:09:57+00:00"
+    },
+    {
+      "_contact_id": "p_160",
+      "stage": "lead",
+      "entered_at": "2025-09-03T07:05:10+00:00"
+    },
+    {
+      "_contact_id": "p_161",
+      "stage": "lead",
+      "entered_at": "2026-02-12T14:27:16+00:00"
+    },
+    {
+      "_contact_id": "p_162",
+      "stage": "lead",
+      "entered_at": "2026-01-27T20:44:42+00:00"
+    },
+    {
+      "_contact_id": "p_163",
+      "stage": "lead",
+      "entered_at": "2025-05-16T19:53:11+00:00"
+    },
+    {
+      "_contact_id": "p_164",
+      "stage": "lead",
+      "entered_at": "2025-07-05T00:06:09+00:00"
+    },
+    {
+      "_contact_id": "p_165",
+      "stage": "lead",
+      "entered_at": "2026-02-28T17:46:12+00:00"
     }
   ],
   "products": [
@@ -6365,6 +6693,118 @@
       "dealtype": "newbusiness",
       "pipeline": "default",
       "closedate": "2026-07-18T07:49:32+00:00"
+    },
+    {
+      "_id": "d_200",
+      "_company_id": "c_36",
+      "_subtype": "newbusiness",
+      "_billing_interval": "annual",
+      "_is_closed": false,
+      "_quality_issue": "null_amount",
+      "dealname": "Zavala, Herrera and Crosby - NULL Amount",
+      "amount": null,
+      "dealstage": "appointmentscheduled",
+      "dealtype": "newbusiness",
+      "pipeline": "default",
+      "closedate": "2026-07-07T20:10:10+00:00"
+    },
+    {
+      "_id": "d_201",
+      "_company_id": "c_12",
+      "_subtype": "newbusiness",
+      "_billing_interval": "annual",
+      "_is_closed": false,
+      "_quality_issue": "null_amount",
+      "dealname": "Evans, Fowler and Lynch - NULL Amount",
+      "amount": null,
+      "dealstage": "appointmentscheduled",
+      "dealtype": "newbusiness",
+      "pipeline": "default",
+      "closedate": "2026-07-20T09:58:09+00:00"
+    },
+    {
+      "_id": "d_202",
+      "_company_id": "c_29",
+      "_subtype": "newbusiness",
+      "_billing_interval": "annual",
+      "_is_closed": false,
+      "_quality_issue": "null_amount",
+      "dealname": "Watts LLC - NULL Amount",
+      "amount": null,
+      "dealstage": "appointmentscheduled",
+      "dealtype": "newbusiness",
+      "pipeline": "default",
+      "closedate": "2026-11-08T09:26:08+00:00"
+    },
+    {
+      "_id": "d_203",
+      "_company_id": "c_45",
+      "_subtype": "newbusiness",
+      "_billing_interval": "annual",
+      "_is_closed": false,
+      "_quality_issue": "negative_amount",
+      "dealname": "Bryant Group - Negative Amount",
+      "amount": -27919.88,
+      "dealstage": "presentationscheduled",
+      "dealtype": "newbusiness",
+      "pipeline": "default",
+      "closedate": "2026-10-23T16:50:56+00:00"
+    },
+    {
+      "_id": "d_204",
+      "_company_id": "c_32",
+      "_subtype": "newbusiness",
+      "_billing_interval": "annual",
+      "_is_closed": false,
+      "_quality_issue": "negative_amount",
+      "dealname": "Garcia, Deleon and Henson - Negative Amount",
+      "amount": -45724.8,
+      "dealstage": "appointmentscheduled",
+      "dealtype": "newbusiness",
+      "pipeline": "default",
+      "closedate": "2026-09-30T01:47:55+00:00"
+    },
+    {
+      "_id": "d_205",
+      "_company_id": "c_15",
+      "_subtype": "newbusiness",
+      "_billing_interval": "annual",
+      "_is_closed": false,
+      "_quality_issue": "stale_open",
+      "dealname": "Santos, Kim and Holmes - Stale Open",
+      "amount": 105870.01,
+      "dealstage": "contractsent",
+      "dealtype": "newbusiness",
+      "pipeline": "default",
+      "closedate": "2026-02-09T01:16:33+00:00"
+    },
+    {
+      "_id": "d_206",
+      "_company_id": "c_30",
+      "_subtype": "newbusiness",
+      "_billing_interval": "annual",
+      "_is_closed": false,
+      "_quality_issue": "stale_open",
+      "dealname": "Cook and Sons - Stale Open",
+      "amount": 138032.04,
+      "dealstage": "presentationscheduled",
+      "dealtype": "newbusiness",
+      "pipeline": "default",
+      "closedate": "2026-01-23T03:29:16+00:00"
+    },
+    {
+      "_id": "d_207",
+      "_company_id": "c_16",
+      "_subtype": "newbusiness",
+      "_billing_interval": "annual",
+      "_is_closed": false,
+      "_quality_issue": "stale_open",
+      "dealname": "Smith Ltd - Stale Open",
+      "amount": 162344.17,
+      "dealstage": "appointmentscheduled",
+      "dealtype": "newbusiness",
+      "pipeline": "default",
+      "closedate": "2026-01-13T07:42:59+00:00"
     }
   ],
   "line_items": [

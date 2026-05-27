@@ -76,7 +76,9 @@ def chunked(items: list, size: int = BATCH_SIZE) -> Iterable[list]:
 
 
 def strip_meta(record: dict) -> dict:
-    return {k: v for k, v in record.items() if not k.startswith("_")}
+    """Remove underscore-prefixed seeder metadata AND drop None values (HubSpot
+    rejects explicit nulls on some properties; omitting the field is safer)."""
+    return {k: v for k, v in record.items() if not k.startswith("_") and v is not None}
 
 
 class HubSpotClient:

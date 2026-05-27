@@ -1,0 +1,42 @@
+# dbt project manifest. Tells dbt where things live and how to materialize them.
+# Phase 6.1 of the RevOps pipeline.
+
+name: 'revops_pipeline'
+version: '1.0.0'
+config-version: 2
+
+# Which profile (in profiles.yml) holds the connection details.
+profile: 'revops_pipeline'
+
+# Where dbt looks for each kind of file.
+model-paths:    ["models"]
+seed-paths:     ["seeds"]
+test-paths:     ["tests"]
+macro-paths:    ["macros"]
+analysis-paths: ["analyses"]
+snapshot-paths: ["snapshots"]
+
+# Where dbt writes its compiled SQL + run artifacts.
+target-path:   "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Per-folder defaults. Staging models are views (no storage cost, always fresh).
+# Mart models are tables (faster queries, worth the storage). Schema overrides
+# route models to the right Snowflake schema — see macros/generate_schema_name.sql
+# for why this is "use as-is" rather than dbt's default "append to target schema".
+models:
+  revops_pipeline:
+    staging:
+      +materialized: view
+      +schema: staging
+    intermediate:
+      # Dedicated INTERMEDIATE schema in Snowflake — created in
+      # infra/snowflake_setup.sql, accessible by the REVOPS_TRANSFORMER role.
+      # The cleaning layer between staging and marts.
+      +materialized: view
+      +schema: intermediate
+    marts:
+      +materialized: table
+      +schema: marts

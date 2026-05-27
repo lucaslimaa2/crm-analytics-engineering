@@ -1,0 +1,25 @@
+# Template for dbt/profiles.yml — the actual file is gitignored.
+#
+# To use:
+#   1. Copy this to dbt/profiles.yml      (in PowerShell: Copy-Item dbt/profiles.yml.example dbt/profiles.yml)
+#   2. The defaults already reference env_var(...) — no edits needed if your .env
+#      has the SNOWFLAKE_* vars set from Phase 4.
+#
+# `env_var('NAME')` reads at dbt run-time from the OS environment. We load .env
+# into the environment by running `dotenv -- dbt run ...` OR by exporting the
+# vars manually. See README for the exact command.
+
+revops_pipeline:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      account:   "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user:      "{{ env_var('SNOWFLAKE_USER_TRANSFORMER') }}"
+      password:  "{{ env_var('SNOWFLAKE_PASSWORD_TRANSFORMER') }}"
+      role:      REVOPS_TRANSFORMER
+      database:  "{{ env_var('SNOWFLAKE_DATABASE') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE') }}"
+      schema:    STAGING     # default landing schema; overridden per directory in dbt_project.yml
+      threads:   4           # parallel models per dbt run; XS warehouse handles 4 fine
+      client_session_keep_alive: false

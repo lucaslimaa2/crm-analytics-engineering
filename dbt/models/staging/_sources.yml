@@ -1,0 +1,121 @@
+version: 2
+
+sources:
+  - name: hubspot
+    description: >
+      Raw HubSpot CRM data extracted by extract/extract.py (Phase 5).
+      Mirrors HubSpot API responses with no transformation — flattening happens
+      at the staging layer.
+    database: REVOPS
+    schema: RAW
+    # Default freshness SLA, applied to every table below unless overridden.
+    # extract.extract runs daily at 06:00 UTC; data older than 25h means extraction
+    # is more than an hour late, older than 48h means it has been broken for >1 day.
+    loaded_at_field: _loaded_at
+    freshness:
+      warn_after:  {count: 25, period: hour}
+      error_after: {count: 48, period: hour}
+
+    tables:
+      - name: hubspot_companies
+        description: One row per company in HubSpot (size tier, industry, employee count, revenue, etc.).
+        columns:
+          - name: hs_object_id
+            description: HubSpot natural key for the company.
+            data_tests:
+              - unique
+              - not_null
+          - name: properties
+            description: VARIANT JSON containing all extracted company properties.
+            data_tests:
+              - not_null
+          - name: associations
+            description: VARIANT JSON of outbound associations. NULL for companies (children point to parents).
+          - name: _loaded_at
+            description: Timestamp when extract/extract.py wrote this row.
+            data_tests:
+              - not_null
+
+      - name: hubspot_contacts
+        description: One row per contact in HubSpot. Each contact is associated to exactly one company.
+        columns:
+          - name: hs_object_id
+            description: HubSpot natural key for the contact.
+            data_tests:
+              - unique
+              - not_null
+          - name: properties
+            description: >
+              VARIANT JSON of contact properties (firstname, lastname, email, jobtitle,
+              phone, lifecyclestage, createdate, hs_lastmodifieddate).
+            data_tests:
+              - not_null
+          - name: associations
+            description: >
+              VARIANT JSON. `associations.companies.results[]` lists linked HubSpot
+              company IDs (the parent company the contact belongs to).
+          - name: _loaded_at
+            data_tests:
+              - not_null
+
+      - name: hubspot_deals
+        description: One row per deal in HubSpot. Each deal is associated to a company.
+        columns:
+          - name: hs_object_id
+            description: HubSpot natural key for the deal.
+            data_tests:
+              - unique
+              - not_null
+          - name: properties
+            description: >
+              VARIANT JSON of deal properties (dealname, amount, dealstage, dealtype,
+              pipeline, closedate).
+            data_tests:
+              - not_null
+          - name: associations
+            description: >
+              VARIANT JSON. `associations.companies.results[]` lists linked HubSpot
+              company IDs (the company the deal is on).
+          - name: _loaded_at
+            data_tests:
+              - not_null
+
+      - name: hubspot_line_items
+        description: One row per line item (a product+quantity attached to a deal).
+        columns:
+          - name: hs_object_id
+            description: HubSpot natural key for the line item.
+            data_tests:
+              - unique
+              - not_null
+          - name: properties
+            description: >
+              VARIANT JSON of line item properties (name, quantity, price, amount,
+              hs_product_id).
+            data_tests:
+              - not_null
+          - name: associations
+            description: >
+              VARIANT JSON. `associations.deals.results[]` lists linked HubSpot deal IDs
+              (the deal this line item belongs to).
+          - name: _loaded_at
+            data_tests:
+              - not_null
+
+      - name: hubspot_products
+        description: One row per product/SKU in HubSpot's product library. Referenced by line items via hs_product_id.
+        columns:
+          - name: hs_object_id
+            description: HubSpot natural key for the product.
+            data_tests:
+              - unique
+              - not_null
+          - name: properties
+            description: VARIANT JSON of product properties (name, price, hs_sku).
+            data_tests:
+              - not_null
+          - name: associations
+            description: NULL for products (line items point at them via hs_product_id, not the reverse).
+          - name: _loaded_at
+            data_tests:
+              - not_null

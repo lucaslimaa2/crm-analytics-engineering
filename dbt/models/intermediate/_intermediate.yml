@@ -1,0 +1,200 @@
+version: 2
+
+models:
+  # ─── Cleaned entity views ──────────────────────────────────────────────────
+
+  - name: int_hubspot__companies
+    description: >
+      Cleaned companies. TRIM on names, drops the HubSpot default sample
+      company and auto-created shell companies (NULL industry + employees + revenue).
+    columns:
+      - name: company_id
+        description: HubSpot natural key. Unique after shell-company filtering.
+        data_tests:
+          - unique
+          - not_null
+      - name: name
+        description: Company name (whitespace trimmed).
+      - name: domain
+        description: Primary web domain.
+      - name: industry
+        description: HubSpot industry enum. NOT NULL after shell filtering.
+      - name: employee_count
+        description: Approximate headcount.
+      - name: annual_revenue_usd
+        description: Self-reported annual revenue in USD.
+      - name: city
+        description: Company headquarters city.
+      - name: country
+        description: Company headquarters country.
+      - name: created_at_hubspot
+        description: When the record was first created in HubSpot.
+      - name: modified_at_hubspot
+        description: When the record was last modified in HubSpot.
+      - name: _loaded_at
+        description: When our extractor wrote this row to Snowflake RAW.
+
+  - name: int_hubspot__contacts
+    description: >
+      Cleaned contacts. Filters NULL emails, test records, and HubSpot
+      onboarding samples. Deduplicates by (first_name, last_name) keeping
+      the earliest. Includes primary company_id via LEFT JOIN.
+    columns:
+      - name: contact_id
+        description: HubSpot natural key. Unique after deduplication.
+        data_tests:
+          - unique
+          - not_null
+      - name: company_id
+        description: Primary company HubSpot ID (from contact_to_company association). NULL if no primary link exists.
+      - name: first_name
+        description: Contact first name (trimmed).
+      - name: last_name
+        description: Contact last name (trimmed).
+      - name: email
+        description: Contact email (lowercased, trimmed). NOT NULL after filtering.
+        data_tests:
+          - not_null
+      - name: job_title
+        description: Contact job title.
+      - name: phone
+        description: Contact phone number.
+      - name: lifecycle_stage
+        description: "Current HubSpot lifecycle stage: lead, marketingqualifiedlead, salesqualifiedlead, opportunity, or customer."
+      - name: created_at_hubspot
+        description: When the record was first created in HubSpot.
+      - name: modified_at_hubspot
+        description: When the record was last modified in HubSpot.
+      - name: _loaded_at
+        description: When our extractor wrote this row to Snowflake RAW.
+
+  - name: int_hubspot__deals
+    description: >
+      Cleaned deals. Drops NULL and negative amounts. Adds is_stale flag
+      for open deals with past close dates (kept for visibility, not dropped).
+    columns:
+      - name: deal_id
+        description: HubSpot natural key. Unique (no dedup needed — dirty deals had distinct IDs).
+        data_tests:
+          - unique
+          - not_null
+      - name: deal_name
+        description: Human-readable deal name.
+      - name: amount_usd
+        description: Deal value in USD. NOT NULL and >= 0 after filtering.
+        data_tests:
+          - not_null
+      - name: stage_id
+        description: Pipeline stage internal ID (e.g. closedwon, contractsent).
+      - name: deal_type
+        description: "HubSpot deal type: newbusiness or existingbusiness."
+      - name: pipeline_id
+        description: Pipeline identifier (e.g. default).
+      - name: close_date
+        description: Expected or actual close date.
+      - name: is_stale
+        description: "TRUE if the deal is still open but its close_date is in the past. Added by the int_ layer — does not exist in staging."
+      - name: created_at_hubspot
+        description: When the record was first created in HubSpot.
+      - name: modified_at_hubspot
+        description: When the record was last modified in HubSpot.
+      - name: _loaded_at
+        description: When our extractor wrote this row to Snowflake RAW.
+
+  - name: int_hubspot__line_items
+    description: >
+      Line items passed through from staging unchanged (clean source data).
+      Exists for uniform medallion layering so marts always read from int_*.
+    columns:
+      - name: line_item_id
+        description: HubSpot natural key (hs_object_id).
+        data_tests:
+          - unique
+          - not_null
+      - name: product_name
+        description: Display name of the product/SKU.
+      - name: quantity
+        description: Number of units.
+      - name: unit_price_usd
+        description: Price per unit in USD.
+      - name: total_amount_usd
+        description: quantity * unit_price_usd.
+      - name: product_id
+        description: HubSpot product ID linking to int_hubspot__products.
+      - name: created_at_hubspot
+        description: When the record was first created in HubSpot.
+      - name: modified_at_hubspot
+        description: When the record was last modified in HubSpot.
+      - name: _loaded_at
+        description: When our extractor wrote this row to Snowflake RAW.
+
+  - name: int_hubspot__products
+    description: >
+      Products passed through from staging unchanged (clean source data).
+      Exists for uniform medallion layering so marts always read from int_*.
+    columns:
+      - name: product_id
+        description: HubSpot natural key (hs_object_id).
+        data_tests:
+          - unique
+          - not_null
+      - name: product_name
+        description: Product display name.
+      - name: unit_price_usd
+        description: List price in USD.
+      - name: sku
+        description: Product SKU code (e.g. CORE-001).
+      - name: created_at_hubspot
+        description: When the record was first created in HubSpot.
+      - name: modified_at_hubspot
+        description: When the record was last modified in HubSpot.
+      - name: _loaded_at
+        description: When our extractor wrote this row to Snowflake RAW.
+
+  # ─── Cleaned link views (primary associations only) ────────────────────────
+
+  - name: int_hubspot__contact_company_primary
+    description: >
+      Primary contact-to-company links only. Drops auto-discovered
+      _unlabeled associations. One row per contact's primary company.
+    columns:
+      - name: contact_id
+        description: Contact HubSpot ID.
+        data_tests:
+          - not_null
+      - name: company_id
+        description: Primary company HubSpot ID.
+        data_tests:
+          - not_null
+      - name: _loaded_at
+        description: When our extractor wrote the parent contact row.
+
+  - name: int_hubspot__deal_company_primary
+    description: >
+      Primary deal-to-company links only. One row per deal's primary company.
+    columns:
+      - name: deal_id
+        description: Deal HubSpot ID.
+        data_tests:
+          - not_null
+      - name: company_id
+        description: Primary company HubSpot ID.
+        data_tests:
+          - not_null
+      - name: _loaded_at
+        description: When our extractor wrote the parent deal row.
+
+  - name: int_hubspot__line_item_deal_primary
+    description: >
+      Primary line-item-to-deal links only. One row per line item's parent deal.
+    columns:
+      - name: line_item_id
+        description: Line item HubSpot ID.
+        data_tests:
+          - not_null
+      - name: deal_id
+        description: Parent deal HubSpot ID.
+        data_tests:
+          - not_null
+      - name: _loaded_at
+        description: When our extractor wrote the parent line item row.

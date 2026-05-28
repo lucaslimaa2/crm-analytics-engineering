@@ -1,0 +1,186 @@
+version: 2
+
+models:
+  # ─── Entity views ──────────────────────────────────────────────────────────
+
+  - name: stg_hubspot__companies
+    description: Flattened company records from RAW. One row per HubSpot company.
+    columns:
+      - name: company_id
+        description: HubSpot natural key (hs_object_id).
+        data_tests:
+          - unique
+          - not_null
+      - name: name
+        description: Company display name.
+      - name: domain
+        description: Primary web domain (e.g. acme.com).
+      - name: industry
+        description: HubSpot industry enum value (e.g. COMPUTER_SOFTWARE).
+      - name: employee_count
+        description: Approximate headcount.
+      - name: annual_revenue_usd
+        description: Self-reported annual revenue in USD.
+      - name: city
+        description: Company headquarters city.
+      - name: country
+        description: Company headquarters country.
+      - name: created_at_hubspot
+        description: When the record was first created in HubSpot.
+      - name: modified_at_hubspot
+        description: When the record was last modified in HubSpot.
+      - name: _loaded_at
+        description: When our extractor wrote this row to Snowflake RAW.
+
+  - name: stg_hubspot__contacts
+    description: Flattened contact records from RAW. One row per HubSpot contact.
+    columns:
+      - name: contact_id
+        description: HubSpot natural key (hs_object_id).
+        data_tests:
+          - unique
+          - not_null
+      - name: first_name
+        description: Contact first name.
+      - name: last_name
+        description: Contact last name.
+      - name: email
+        description: Contact email address. May be NULL for dirty records (handled by int_ layer).
+      - name: job_title
+        description: Contact job title.
+      - name: phone
+        description: Contact phone number.
+      - name: lifecycle_stage
+        description: "Current HubSpot lifecycle stage: lead, marketingqualifiedlead, salesqualifiedlead, opportunity, or customer."
+      - name: created_at_hubspot
+        description: When the record was first created in HubSpot.
+      - name: modified_at_hubspot
+        description: When the record was last modified in HubSpot.
+      - name: _loaded_at
+        description: When our extractor wrote this row to Snowflake RAW.
+
+  - name: stg_hubspot__deals
+    description: Flattened deal records from RAW. One row per HubSpot deal.
+    columns:
+      - name: deal_id
+        description: HubSpot natural key (hs_object_id).
+        data_tests:
+          - unique
+          - not_null
+      - name: deal_name
+        description: Human-readable deal name (e.g. "Acme Inc - New Business").
+      - name: amount_usd
+        description: Deal value in USD. May be NULL or negative for dirty records.
+      - name: stage_id
+        description: Pipeline stage internal ID (e.g. closedwon, contractsent).
+      - name: deal_type
+        description: "HubSpot deal type: newbusiness or existingbusiness."
+      - name: pipeline_id
+        description: Pipeline identifier (e.g. default).
+      - name: close_date
+        description: Expected or actual close date.
+      - name: created_at_hubspot
+        description: When the record was first created in HubSpot.
+      - name: modified_at_hubspot
+        description: When the record was last modified in HubSpot.
+      - name: _loaded_at
+        description: When our extractor wrote this row to Snowflake RAW.
+
+  - name: stg_hubspot__line_items
+    description: Flattened line item records from RAW. One row per line item (product + quantity on a deal).
+    columns:
+      - name: line_item_id
+        description: HubSpot natural key (hs_object_id).
+        data_tests:
+          - unique
+          - not_null
+      - name: product_name
+        description: Display name of the product/SKU on this line.
+      - name: quantity
+        description: Number of units.
+      - name: unit_price_usd
+        description: Price per unit in USD.
+      - name: total_amount_usd
+        description: quantity * unit_price_usd.
+      - name: product_id
+        description: HubSpot product ID (hs_product_id) linking to stg_hubspot__products.
+      - name: created_at_hubspot
+        description: When the record was first created in HubSpot.
+      - name: modified_at_hubspot
+        description: When the record was last modified in HubSpot.
+      - name: _loaded_at
+        description: When our extractor wrote this row to Snowflake RAW.
+
+  - name: stg_hubspot__products
+    description: Flattened product/SKU records from RAW. One row per product in HubSpot's product library.
+    columns:
+      - name: product_id
+        description: HubSpot natural key (hs_object_id).
+        data_tests:
+          - unique
+          - not_null
+      - name: product_name
+        description: Product display name.
+      - name: unit_price_usd
+        description: List price in USD.
+      - name: sku
+        description: Product SKU code (e.g. CORE-001).
+      - name: created_at_hubspot
+        description: When the record was first created in HubSpot.
+      - name: modified_at_hubspot
+        description: When the record was last modified in HubSpot.
+      - name: _loaded_at
+        description: When our extractor wrote this row to Snowflake RAW.
+
+  # ─── Link views (association tables) ───────────────────────────────────────
+
+  - name: stg_hubspot__contact_company_links
+    description: >
+      Contact-to-company associations flattened from RAW. Includes both
+      labeled (primary) and unlabeled (auto-discovered) links. Deduplicated
+      via ROW_NUMBER to one row per (contact, company, link_type).
+    columns:
+      - name: contact_id
+        description: Contact HubSpot ID (references stg_hubspot__contacts.contact_id).
+        data_tests:
+          - not_null
+      - name: company_id
+        description: Company HubSpot ID (references stg_hubspot__companies.company_id).
+        data_tests:
+          - not_null
+      - name: link_type
+        description: "Association label: contact_to_company (primary) or contact_to_company_unlabeled (auto-discovered)."
+      - name: _loaded_at
+        description: When our extractor wrote the parent contact row to Snowflake RAW.
+
+  - name: stg_hubspot__deal_company_links
+    description: Deal-to-company associations flattened from RAW. One row per (deal, company, link_type).
+    columns:
+      - name: deal_id
+        description: Deal HubSpot ID.
+        data_tests:
+          - not_null
+      - name: company_id
+        description: Company HubSpot ID.
+        data_tests:
+          - not_null
+      - name: link_type
+        description: Association label (e.g. deal_to_company).
+      - name: _loaded_at
+        description: When our extractor wrote the parent deal row to Snowflake RAW.
+
+  - name: stg_hubspot__line_item_deal_links
+    description: Line-item-to-deal associations flattened from RAW. One row per (line_item, deal, link_type).
+    columns:
+      - name: line_item_id
+        description: Line item HubSpot ID.
+        data_tests:
+          - not_null
+      - name: deal_id
+        description: Deal HubSpot ID.
+        data_tests:
+          - not_null
+      - name: link_type
+        description: Association label (e.g. line_item_to_deal).
+      - name: _loaded_at
+        description: When our extractor wrote the parent line item row to Snowflake RAW.

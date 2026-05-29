@@ -1,14 +1,17 @@
 {#
     Intermediate cleaning for deals.
 
-    Cleaning steps applied (Phase 6.6):
+    Cleaning steps applied:
       1. Drop deals with NULL amount — can't compute revenue without it.
       2. Drop deals with negative amount — data entry typos, not real refunds
          (real refund accounting belongs elsewhere, not in the pipeline).
       3. Flag stale open deals (open stage + closedate in the past) with an
          `is_stale` boolean. We KEEP them for visibility — they're a sales-ops
-         problem to surface, not data to hide. Downstream marts can filter or
-         flag as appropriate.
+         problem to surface, not data to hide.
+
+    Billing details (billing_interval, ACV) come from the billing source, joined
+    in fct_revenue — not from a deal seed. Deal subtype uses HubSpot's native
+    `deal_type` (newbusiness / existingbusiness).
 #}
 with stg as (
     select * from {{ ref('stg_hubspot__deals') }}

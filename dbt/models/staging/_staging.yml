@@ -184,3 +184,51 @@ models:
         description: Association label (e.g. line_item_to_deal).
       - name: _loaded_at
         description: When our extractor wrote the parent line item row to Snowflake RAW.
+
+  - name: stg_hubspot__contact_lifecycle_history
+    description: Flattened lifecycle stage-transition events. One row per (contact, stage) entry.
+    columns:
+      - name: event_id
+        description: Synthetic key (contact_hs_id + stage).
+        data_tests:
+          - unique
+          - not_null
+      - name: contact_id
+        description: HubSpot contact ID this transition belongs to.
+        data_tests:
+          - not_null
+      - name: lifecycle_stage
+        description: "Stage entered: lead, marketingqualifiedlead, salesqualifiedlead, opportunity, customer."
+      - name: entered_at
+        description: When the contact entered this stage.
+      - name: _loaded_at
+        description: When the lifecycle loader wrote this row.
+
+  # ─── Billing source ──────────────────────────────────────────────────────
+
+  - name: stg_billing__subscriptions
+    description: Flattened subscriptions from the billing source. One row per subscription (one per closed-won deal).
+    columns:
+      - name: subscription_id
+        description: Billing system natural key.
+        data_tests:
+          - unique
+          - not_null
+      - name: deal_id
+        description: HubSpot deal ID this subscription originated from (the CRM ↔ billing join key).
+        data_tests:
+          - not_null
+      - name: billing_interval
+        description: "annual or monthly — drives the MRR calculation."
+      - name: amount_usd
+        description: Recurring charge per period (per-year if annual, per-month if monthly).
+      - name: term_months
+        description: Contract length in months (12 / 24 / 36).
+      - name: status
+        description: "active or churned."
+      - name: started_at
+        description: Subscription start (= deal close date).
+      - name: churned_at
+        description: When the subscription churned (NULL if active).
+      - name: _loaded_at
+        description: When the billing loader wrote this row.

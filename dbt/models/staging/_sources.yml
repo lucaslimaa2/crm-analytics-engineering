@@ -119,3 +119,52 @@ sources:
           - name: _loaded_at
             data_tests:
               - not_null
+
+      - name: hubspot_contact_lifecycle_history
+        description: >
+          Contact lifecycle stage-transition events — a mock of what HubSpot's
+          property-history API provides (the free tier doesn't expose per-stage
+          dates). One row per (contact, stage) entry. Source for fct_funnel.
+        columns:
+          - name: event_id
+            description: Synthetic key — contact_hs_id + '_' + stage. Unique (a contact enters each stage at most once).
+            data_tests:
+              - unique
+              - not_null
+          - name: properties
+            description: VARIANT JSON (contact_id, stage, entered_at).
+            data_tests:
+              - not_null
+          - name: _loaded_at
+            description: When the lifecycle loader wrote this row.
+            data_tests:
+              - not_null
+
+  - name: billing
+    description: >
+      Mock billing system (Stripe/Chargebee analogue) — the second source.
+      One subscription per closed-won deal. Source of truth for recurring
+      revenue and churn. Loaded by extract/load_billing.py.
+    database: REVOPS
+    schema: RAW
+    loaded_at_field: _loaded_at
+    freshness:
+      warn_after:  {count: 25, period: hour}
+      error_after: {count: 48, period: hour}
+    tables:
+      - name: billing_subscriptions
+        description: One row per subscription. Links to a HubSpot deal via properties.crm_deal_id.
+        columns:
+          - name: subscription_id
+            description: Billing system's natural key for the subscription.
+            data_tests:
+              - unique
+              - not_null
+          - name: properties
+            description: VARIANT JSON (crm_deal_id, billing_interval, amount, term_months, status, started_at, churned_at).
+            data_tests:
+              - not_null
+          - name: _loaded_at
+            description: When extract/load_billing.py wrote this row.
+            data_tests:
+              - not_null

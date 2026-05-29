@@ -1,14 +1,30 @@
 {#
-    Primary deal -> company links only.
+    One company per deal.
 
-    Filter is a no-op against the current data (HubSpot didn't auto-discover
-    secondary company associations for deals the way it did for contacts),
-    but applying it preserves the convention from int_hubspot__contact_company_primary
-    so marts can JOIN against any of the *_primary tables with the same assumption.
+    Unlike contacts (where HubSpot's email-domain auto-discovery creates extra
+    `_unlabeled` links to DIFFERENT companies that must be filtered out), each
+    deal only ever has ONE real company association. A re-seeding incident
+    demoted most deals' association from the labeled `deal_to_company` to
+    `deal_to_company_unlabeled`, so a strict label filter would drop them.
+
+    Verified: every deal maps to exactly one company. So we take one row per
+    deal regardless of label, preferring the labeled one when both exist.
 #}
+with ranked as (
+    select
+        deal_id,
+        company_id,
+        _loaded_at,
+        row_number() over (
+            partition by deal_id
+            order by case when link_type = 'deal_to_company' then 0 else 1 end, company_id
+        ) as rn
+    from {{ ref('stg_hubspot__deal_company_links') }}
+)
+
 select
     deal_id,
     company_id,
     _loaded_at
-from {{ ref('stg_hubspot__deal_company_links') }}
-where link_type = 'deal_to_company'
+from ranked
+where rn = 1

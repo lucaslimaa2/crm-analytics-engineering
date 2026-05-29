@@ -198,3 +198,62 @@ models:
           - not_null
       - name: _loaded_at
         description: When our extractor wrote the parent line item row.
+
+  - name: int_hubspot__contact_lifecycle_history
+    description: >
+      Lifecycle stage-transition events filtered to surviving contacts, with a
+      stage_order column. Event grain (one row per contact-stage entry). Source
+      for fct_funnel conversion-rate and time-to-convert analysis.
+    columns:
+      - name: event_id
+        description: Synthetic key (contact_hs_id + stage).
+        data_tests:
+          - unique
+          - not_null
+      - name: contact_id
+        description: HubSpot contact ID (joins to dim_contacts / int_hubspot__contacts).
+        data_tests:
+          - not_null
+      - name: lifecycle_stage
+        description: "Stage entered: lead, marketingqualifiedlead, salesqualifiedlead, opportunity, customer."
+      - name: stage_order
+        description: "Stage sequence 1..5 (lead=1 ... customer=5) for ordering and conversion math."
+      - name: entered_at
+        description: When the contact entered this stage.
+      - name: _loaded_at
+        description: When the lifecycle loader wrote this row.
+
+  # ─── Billing source ──────────────────────────────────────────────────────
+
+  - name: int_billing__subscriptions
+    description: >
+      Cleaned billing subscriptions with derived status flags. Source of truth
+      for recurring revenue and churn; joined to HubSpot deals in fct_revenue.
+    columns:
+      - name: subscription_id
+        description: Billing system natural key.
+        data_tests:
+          - unique
+          - not_null
+      - name: deal_id
+        description: HubSpot deal ID (CRM ↔ billing join key).
+        data_tests:
+          - not_null
+      - name: billing_interval
+        description: "annual or monthly."
+      - name: amount_usd
+        description: Recurring charge per period.
+      - name: term_months
+        description: Contract length in months.
+      - name: status
+        description: "active or churned."
+      - name: is_active
+        description: Derived boolean (status = 'active').
+      - name: is_churned
+        description: Derived boolean (status = 'churned') — drives Churn MRR.
+      - name: started_at
+        description: Subscription start.
+      - name: churned_at
+        description: Churn timestamp (NULL if active).
+      - name: _loaded_at
+        description: When the billing loader wrote this row.

@@ -1,0 +1,332 @@
+# =============================================================================
+# RevOps Metric Catalog — single source of truth for every metric this
+# warehouse exposes.
+#
+# Discipline this catalog enforces:
+#   - Every metric is defined exactly ONCE, here, with the SQL reference to its
+#     mart model. Downstream consumers (Streamlit, Reverse ETL, ad-hoc SQL)
+#     SELECT the metric. They do not recompute it.
+#   - A new slice of an existing metric ("MRR for enterprise") gets its own
+#     NAMED metric (mrr_enterprise), not a redefinition of mrr.
+#   - Source of truth lives in dbt mart models. This YAML is the catalog that
+#     points at them and documents the why.
+#
+# This file is documentation, not dbt resource config — no version: 2 header,
+# no models: block. dbt parser ignores it; humans read it.
+# =============================================================================
+
+metric_catalog:
+
+  # ─── Revenue (source: marts.fct_revenue) ──────────────────────────────────
+
+  - name: mrr
+    label: Monthly Recurring Revenue
+    definition: Monthly recurring revenue from a closed-won subscription. ACV ÷ 12.
+    formula: SUM(mrr_usd)
+    source_model: marts.fct_revenue
+    grain: one row per closed-won deal / subscription
+    filters: none (model is already won-only via int_billing__subscriptions × fct_deals.is_won)
+    common_cuts:
+      - by metric_month for trend over time
+      - by company_id for ARR per account
+      - by is_churned for active vs churned partition
+    owner: revops-data-team
+    related: [arr, acv, churned_mrr, active_mrr]
+    notes: |
+      mrr_usd = round(amount_usd / 12, 2) regardless of billing_interval.
+      Billing interval is payment cadence (annual vs monthly invoice), NOT an
+      MRR input — a customer paying $120k/yr upfront has the same MRR as one
+      paying $10k/month. Confusing these is the #1 SaaS MRR mistake.
+
+  - name: arr
+    label: Annual Recurring Revenue
+    definition: Annualized recurring revenue from a closed-won subscription. = ACV.
+    formula: SUM(arr_usd)
+    source_model: marts.fct_revenue
+    grain: one row per closed-won deal / subscription
+    filters: status = 'active' for "current ARR"; no filter for "booked ARR"
+    common_cuts:
+      - active ARR snapshot (excludes churned)
+      - booked ARR (includes churned, useful for cumulative bookings story)
+    owner: revops-data-team
+    related: [mrr, acv]
+    notes: |
+      ARR = ACV by definition in a subscription model — both represent the
+      annualized value of a single contract. The naming difference is audience:
+      Finance says ARR, Sales says ACV.
+
+  - name: acv
+    label: Annual Contract Value
+    definition: The annualized contract value for a single closed-won deal.
+    formula: AVG(acv_usd) or SUM depending on cut
+    source_model: marts.fct_revenue
+    grain: one row per closed-won deal / subscription
+    filters: none
+    common_cuts:
+      - histogram of acv_usd (deal-size distribution)
+      - average ACV by deal_type (New Business vs Existing Business)
+    owner: revops-data-team
+    related: [arr, tcv, mrr]
+    notes: |
+      Equivalent to ARR by construction in this model (one subscription per deal,
+      one contract per subscription).
+
+  - name: tcv
+    label: Total Contract Value
+    definition: Full contract value over its complete term (ACV × term in years).
+    formula: SUM(tcv_usd)
+    source_model: marts.fct_revenue
+    grain: one row per closed-won deal / subscription
+    filters: none
+    common_cuts:
+      - by deal_type to compare New / Expansion / Renewal economics
+      - by metric_month for booked TCV trend
+    owner: revops-data-team
+    related: [acv, arr]
+    notes: |
+      tcv_usd = round(amount_usd * (term_months / 12.0), 2). TCV > ARR whenever
+      the contract term exceeds 12 months. Multi-year deals reveal themselves
+      in the TCV-to-ARR ratio.
+
+  - name: churned_mrr
+    label: Churned MRR
+    definition: Monthly recurring revenue lost from subscriptions marked churned.
+    formula: SUM(churned_mrr_usd)
+    source_model: marts.fct_revenue
+    grain: one row per closed-won deal / subscription
+    filters: "is_churned = TRUE — built into the column (0 if not churned)"
+    common_cuts:
+      - by metric_month (booked-month attribution)
+      - by company_id (which accounts churned)
+    owner: revops-data-team
+    related: [mrr, active_mrr]
+    notes: |
+      Defined at the row grain: churned_mrr_usd = mrr_usd if is_churned else 0.
+      The invariant active_mrr + churned_mrr = mrr (row-level) is asserted by
+      the singular test `assert_mrr_reconciliation`.
+
+  - name: active_mrr
+    label: Active MRR
+    definition: Monthly recurring revenue from subscriptions still in active status.
+    formula: SUM(CASE WHEN is_churned THEN 0 ELSE mrr_usd END)
+    source_model: marts.fct_revenue
+    grain: one row per closed-won deal / subscription
+    filters: is_churned = FALSE
+    common_cuts:
+      - by metric_month for active-MRR-over-time
+      - the "current MRR" headline number on the dashboard
+    owner: revops-data-team
+    related: [mrr, churned_mrr]
+    notes: |
+      Not a stored column — derived from mrr_usd × (NOT is_churned). The
+      complementary half of mrr; the partition is enforced by the singular
+      test `assert_mrr_reconciliation`.
+
+  # ─── Pipeline (source: marts.fct_deals + marts.fct_pipeline) ──────────────
+
+  - name: open_pipeline_value
+    label: Open Pipeline Value
+    definition: Sum of deal amounts for deals not yet closed.
+    formula: SUM(total_open_value_usd)  -- from fct_pipeline (already aggregated by stage)
+    source_model: marts.fct_pipeline
+    grain: one row per open pipeline stage
+    filters: is_open = TRUE (built into fct_pipeline)
+    common_cuts:
+      - by stage_id (where pipeline sits)
+      - by company_id via fct_deals join (per-account pipeline)
+    owner: revops-data-team
+    related: [weighted_pipeline_value, win_rate]
+    notes: |
+      "Pipeline" = deals NOT in closedwon or closedlost. Raw sum, no probability
+      weighting (that's weighted_pipeline_value). fct_pipeline is the
+      pre-aggregated view; fct_deals is the row-level fact if you need per-deal.
+
+  - name: weighted_pipeline_value
+    label: Weighted Pipeline Value
+    definition: Open pipeline value × each stage's historical win probability.
+    formula: SUM(weighted_value_usd)
+    source_model: marts.fct_pipeline
+    grain: one row per open pipeline stage
+    filters: is_open = TRUE
+    common_cuts:
+      - by stage_id (which stage contributes most weighted revenue)
+    owner: revops-data-team
+    related: [open_pipeline_value, win_rate]
+    notes: |
+      Probabilities come from HubSpot's pipeline stage configuration
+      (hubspot_pipeline_stages.json), inlined as a VALUES list in fct_pipeline.
+      A deal in "contractsent" (90%) contributes more weighted value than one
+      in "appointmentscheduled" (20%).
+
+  - name: win_rate
+    label: Win Rate
+    definition: Closed-won deals divided by all closed deals.
+    formula: COUNT(*) FILTER (is_won) / NULLIF(COUNT(*) FILTER (is_closed), 0)
+    source_model: marts.fct_deals (deal-level) or marts.fct_account_health (per-account)
+    grain: portfolio-level (a scalar) or per-account from fct_account_health.win_rate
+    filters: is_closed = TRUE (only completed deals)
+    common_cuts:
+      - overall portfolio win rate (one scalar)
+      - by company_id from fct_account_health.win_rate (already computed)
+    owner: revops-data-team
+    related: [open_pipeline_value]
+    notes: |
+      Open deals are excluded from both numerator AND denominator — including
+      them would understate the rate. Per-account win_rate already lives in
+      fct_account_health; portfolio scalar is recomputed on demand.
+
+  # ─── Funnel (source: marts.fct_funnel) ────────────────────────────────────
+
+  - name: lead_to_mql_rate
+    label: Lead → MQL Conversion Rate
+    definition: Share of leads who eventually reached the marketingqualifiedlead stage.
+    formula: |
+      COUNT(DISTINCT contact_id) FILTER (lifecycle_stage = 'marketingqualifiedlead')
+      ÷ COUNT(DISTINCT contact_id) FILTER (lifecycle_stage = 'lead')
+    source_model: marts.fct_funnel
+    grain: one row per (contact, stage entry) — event grain
+    filters: can be cut by cohort_month for time-windowed conversion
+    common_cuts:
+      - overall conversion
+      - by cohort_month for funnel-over-time
+    owner: revops-data-team
+    related: [mql_to_sql_rate, sql_to_customer_rate]
+    notes: |
+      Event grain is what enables cohort cuts ("of leads from March, what
+      % became MQL within 90 days?"). A snapshot of current state cannot
+      answer that — by the time you query, the timestamps are gone.
+
+  - name: mql_to_sql_rate
+    label: MQL → SQL Conversion Rate
+    definition: Share of MQLs who reached salesqualifiedlead stage. The classic marketing/sales handoff metric.
+    formula: |
+      COUNT(DISTINCT contact_id) FILTER (lifecycle_stage = 'salesqualifiedlead')
+      ÷ COUNT(DISTINCT contact_id) FILTER (lifecycle_stage = 'marketingqualifiedlead')
+    source_model: marts.fct_funnel
+    grain: event grain
+    filters: cut by cohort_month for trend
+    common_cuts:
+      - monthly trend (MQL→SQL handoff over time, the dashboard's classic chart)
+    owner: revops-data-team
+    related: [lead_to_mql_rate, median_days_mql_to_sql]
+    notes: |
+      The interview-classic metric. A drop in this rate usually signals one of:
+      Marketing's MQL bar dropped, Sales rejected more handoffs, or attribution
+      broke. The catalog can't tell you which — it tells you WHERE the number
+      lives so the conversation starts from the same denominator.
+
+  - name: sql_to_customer_rate
+    label: SQL → Customer Conversion Rate
+    definition: Share of SQLs who eventually reached customer stage.
+    formula: |
+      COUNT(DISTINCT contact_id) FILTER (lifecycle_stage = 'customer')
+      ÷ COUNT(DISTINCT contact_id) FILTER (lifecycle_stage = 'salesqualifiedlead')
+    source_model: marts.fct_funnel
+    grain: event grain
+    filters: by cohort_month
+    common_cuts:
+      - by cohort_month
+    owner: revops-data-team
+    related: [mql_to_sql_rate]
+    notes: |
+      The full funnel cumulative conversion lead→customer is the product:
+      lead_to_mql_rate × mql_to_sql_rate × sql_to_opportunity_rate × opp_to_customer.
+      We document each leg as its own named metric — never a single bundled
+      "funnel conversion" that hides where drop-off actually happens.
+
+  - name: median_days_mql_to_sql
+    label: Median Days from MQL to SQL
+    definition: Median time spent in MQL stage before transitioning to SQL.
+    formula: MEDIAN(days_to_convert) WHERE lifecycle_stage = 'salesqualifiedlead'
+    source_model: marts.fct_funnel
+    grain: event grain
+    filters: lifecycle_stage = 'salesqualifiedlead' (rows where days_to_convert measures MQL→SQL)
+    common_cuts:
+      - by cohort_month for handoff-speed trend
+    owner: revops-data-team
+    related: [mql_to_sql_rate]
+    notes: |
+      days_to_convert is pre-computed via LAG window in fct_funnel — measures
+      the time spent in the PREVIOUS stage. The "SQL row" carries the MQL→SQL
+      duration; this avoids re-running the window function downstream.
+
+  # ─── Account-level (source: marts.fct_account_health) ─────────────────────
+
+  - name: account_health_score
+    label: Account Health Score
+    definition: Composite 0-100 score per company combining ARR, win rate, pipeline, recency, and churn penalty.
+    formula: |
+      LEAST(100, GREATEST(0,
+          (CASE WHEN arr_usd > 0 THEN 40 ELSE 0 END) +
+          20 * COALESCE(win_rate, 0) +
+          (CASE WHEN open_pipeline_usd > 0 THEN 20 ELSE 0 END) +
+          (CASE recency_bucket WHEN 'recent' THEN 20 WHEN 'aging' THEN 10 ELSE 0 END) -
+          (CASE WHEN has_churn THEN 20 ELSE 0 END)
+      ))
+    source_model: marts.fct_account_health
+    grain: one row per company (current state)
+    filters: none
+    common_cuts:
+      - histogram across all companies (dashboard)
+      - bucketed (healthy 70+, moderate 40-70, at-risk <40)
+    owner: revops-data-team
+    related: [arr_per_account, open_pipeline_value]
+    notes: |
+      Score is clamped to [0, 100] — enforced by `assert_account_health_score_in_range`.
+      Pushed back to HubSpot via Reverse ETL as the `account_health_score` custom
+      Company property — so Sales sees the same number the dashboard shows.
+
+  - name: arr_per_account
+    label: ARR per Account
+    definition: Active ARR for a single company (excludes churned subscriptions).
+    formula: SUM(arr_usd) WHERE is_churned = FALSE
+    source_model: marts.fct_account_health.arr_usd (pre-aggregated) or fct_revenue (recomputable)
+    grain: one row per company in fct_account_health
+    filters: status = 'active' (already applied in the rollup)
+    common_cuts:
+      - account ranking (top accounts by ARR)
+      - distribution histogram
+    owner: revops-data-team
+    related: [arr, mrr]
+    notes: |
+      fct_account_health pre-aggregates this — the catalog points there as the
+      canonical source. Reverse ETL pushes this exact value to HubSpot's
+      `arr_usd` Company property so the CRM stays in sync.
+
+# =============================================================================
+# Glossary — terminology cross-reference for the JD's SaaS vocabulary.
+# =============================================================================
+
+glossary:
+  - term: Lead
+    meaning: Anyone in the CRM not yet qualified. HubSpot lifecycle stage 'lead'.
+
+  - term: MQL (Marketing Qualified Lead)
+    meaning: Marketing scored as fit + engagement. HubSpot stage 'marketingqualifiedlead'.
+
+  - term: SQL (Sales Qualified Lead)
+    meaning: Sales accepted as worth pursuing. HubSpot stage 'salesqualifiedlead'.
+
+  - term: SQO (Sales Qualified Opportunity)
+    meaning: |
+      Conceptually equivalent to "Opportunity" in this project — the moment a Deal
+      record is created. HubSpot's default lifecycle does not include a separate
+      'SQO' stage; the JD terminology maps onto 'opportunity'.
+
+  - term: Opportunity / Deal
+    meaning: HubSpot says "Deal", Salesforce says "Opportunity". Same concept — a tracked sales pursuit.
+
+  - term: Contact
+    meaning: Individual person. Lives in HubSpot's Contacts object.
+
+  - term: Account / Company
+    meaning: Organization. Lives in HubSpot's Companies object.
+
+  - term: New Business
+    meaning: A deal with a never-before-customer company.
+
+  - term: Expansion
+    meaning: A new deal with an existing customer (cross-sell / upsell).
+
+  - term: Renewal
+    meaning: A continuation deal with an existing customer. HubSpot's default dealtype enum has no native 'renewal' value, so our seed maps it onto 'existingbusiness' and preserves the finer distinction in a `_subtype` metadata field.

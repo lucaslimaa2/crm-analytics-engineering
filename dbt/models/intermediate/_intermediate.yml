@@ -239,6 +239,9 @@ models:
         description: HubSpot deal ID (CRM ↔ billing join key).
         data_tests:
           - not_null
+          - relationships:
+              to: ref('int_hubspot__deals')
+              field: deal_id
       - name: billing_interval
         description: "annual or monthly."
       - name: amount_usd

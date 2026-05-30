@@ -1,0 +1,164 @@
+version: 2
+
+models:
+  # ─── Dimensions ────────────────────────────────────────────────────────────
+
+  - name: dim_accounts
+    description: One row per company, with rolled-up deal and contact counts. The account dimension.
+    columns:
+      - name: company_id
+        description: HubSpot company natural key.
+        data_tests:
+          - unique
+          - not_null
+      - name: company_name
+      - name: industry
+      - name: contact_count
+        description: Number of contacts at this company (from int_hubspot__contact_company_primary).
+      - name: deal_count_total
+      - name: deal_count_won
+      - name: deal_count_lost
+      - name: deal_count_open
+
+  - name: dim_contacts
+    description: One row per contact, denormalized with primary company name.
+    columns:
+      - name: contact_id
+        description: HubSpot contact natural key.
+        data_tests:
+          - unique
+          - not_null
+      - name: company_id
+        description: Primary company FK. NULL if the contact has no primary link.
+        data_tests:
+          - relationships:
+              to: ref('dim_accounts')
+              field: company_id
+      - name: email
+        description: NOT NULL after intermediate cleaning.
+        data_tests:
+          - not_null
+      - name: lifecycle_stage
+      - name: full_name
+
+  # ─── Facts ─────────────────────────────────────────────────────────────────
+
+  - name: fct_deals
+    description: Atomic deal fact. One row per deal, with derived status flags. Source for fct_pipeline + fct_revenue.
+    columns:
+      - name: deal_id
+        description: HubSpot deal natural key.
+        data_tests:
+          - unique
+          - not_null
+      - name: company_id
+        description: Owning company FK.
+        data_tests:
+          - relationships:
+              to: ref('dim_accounts')
+              field: company_id
+      - name: amount_usd
+        description: Raw deal value in USD.
+        data_tests:
+          - not_null
+      - name: is_won
+      - name: is_open
+      - name: is_stale
+
+  - name: fct_pipeline
+    description: Aggregate fact, one row per open pipeline stage, with deal count + total/weighted value.
+    columns:
+      - name: stage_id
+        description: HubSpot pipeline stage id (e.g. contractsent).
+        data_tests:
+          - unique
+          - not_null
+      - name: open_deal_count
+      - name: total_open_value_usd
+      - name: weighted_value_usd
+        description: total_open_value_usd × stage win-probability.
+
+  - name: fct_revenue
+    description: >
+      Recurring-revenue metrics per closed-won deal. Joins billing subscriptions
+      (the money) to HubSpot deals (the CRM context). MRR = ACV/12, ARR = ACV,
+      TCV = ACV × term_years; churn from subscription status.
+    columns:
+      - name: subscription_id
+        description: Billing system natural key.
+        data_tests:
+          - unique
+          - not_null
+      - name: deal_id
+        description: CRM deal this subscription originated from.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('fct_deals')
+              field: deal_id
+      - name: company_id
+        description: Owning company.
+        data_tests:
+          - relationships:
+              to: ref('dim_accounts')
+              field: company_id
+      - name: acv_usd
+      - name: mrr_usd
+      - name: arr_usd
+      - name: tcv_usd
+      - name: churned_mrr_usd
+      - name: metric_month
+        description: Bookings month (date_trunc of close_date).
+
+  - name: fct_funnel
+    description: >
+      Event-grain marketing funnel — one row per (contact, lifecycle_stage) entry.
+      Carries days_to_convert (from the previous stage) and cohort_month for
+      cohort-based funnel analysis.
+    columns:
+      - name: event_id
+        description: Synthetic key — contact_id + stage.
+        data_tests:
+          - unique
+          - not_null
+      - name: contact_id
+        description: Surviving contact this event belongs to.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_contacts')
+              field: contact_id
+      - name: company_id
+        description: Contact's primary company (NULL if no primary link).
+        data_tests:
+          - relationships:
+              to: ref('dim_accounts')
+              field: company_id
+      - name: lifecycle_stage
+      - name: stage_order
+      - name: days_to_convert
+        description: Days spent in previous_stage before entering lifecycle_stage. NULL on the lead row.
+      - name: cohort_month
+
+  - name: fct_account_health
+    description: >
+      One row per company — the convergence model. Pulls ARR (fct_revenue),
+      open pipeline (fct_deals), and furthest funnel stage (fct_funnel) into a
+      0-100 account_health_score. Source for Reverse ETL → HubSpot.
+    columns:
+      - name: company_id
+        description: Company natural key. Unique per company.
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('dim_accounts')
+              field: company_id
+      - name: arr_usd
+        description: Current active ARR (excludes churned subscriptions).
+      - name: open_pipeline_usd
+      - name: account_health_score
+        description: 0-100 composite. Pushed to HubSpot via Reverse ETL.
+      - name: has_churn
+      - name: last_activity_date
+      - name: win_rate

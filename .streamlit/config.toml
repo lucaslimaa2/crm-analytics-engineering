@@ -1,0 +1,4 @@
+# Streamlit app configuration. Tracked in git — non-sensitive.
+
+[theme]
+base = "light"

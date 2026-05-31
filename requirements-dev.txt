@@ -1,0 +1,20 @@
+# Local dev + CI dependencies. Includes the dashboard runtime plus everything
+# the pipeline, dbt, Reverse ETL, and tests need.
+#
+# Streamlit Community Cloud does NOT install this; it uses requirements.txt.
+
+-r requirements.txt
+
+# HubSpot extraction + Reverse ETL
+python-dotenv==1.0.1
+requests==2.32.3
+
+# Mock data generation
+Faker==30.8.2
+
+# dbt
+dbt-core==1.8.7
+dbt-snowflake==1.8.4
+
+# Testing
+pytest==8.3.3

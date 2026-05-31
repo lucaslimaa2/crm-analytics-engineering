@@ -15,7 +15,7 @@ A production-grade RevOps analytics pipeline. **HubSpot CRM** and a **mock billi
 
 ## What this is
 
-Most analytics portfolios stop at "I built a dashboard." This project covers the whole pipeline a real RevOps team owns: two upstream sources, the warehouse, the transformation layer, the orchestration, the dashboard, AND the reverse ETL that pushes computed metrics back into the CRM where sales actually work.
+This project covers the whole pipeline a CRM team owns: two upstream sources, the warehouse, the transformation layer, the orchestration, the dashboard, AND the reverse ETL that pushes computed metrics back into the CRM where sales actually work.
 
 Revenue metrics (MRR, ARR, churn) come from the billing source joined to CRM deals, mirroring the real-world split where the CRM owns the sales process and the billing system owns the money. The dashboard never recomputes a metric: every number traces back to a single SQL definition in the dbt mart layer, cataloged in [`_metrics.yml`](dbt/models/marts/_metrics.yml). That discipline ends the "whose MRR is right?" problem.
 
@@ -75,7 +75,7 @@ flowchart LR
 ```
 
 **Highlights:**
-- **Two sources, not one.** HubSpot CRM + billing system, joined at `fct_revenue` (CRM context + billing numbers)
+- **Two sources** HubSpot CRM + billing system, joined at `fct_revenue` (CRM context + billing numbers)
 - **Medallion architecture.** Each layer reads only from the previous one; cleaning happens in `intermediate/`, business logic in `marts/`
 - **Seven marts.** `dim_accounts`, `dim_contacts`, `fct_deals`, `fct_pipeline`, `fct_revenue`, `fct_funnel`, `fct_account_health`
 - **Clustering on time-queried facts.** `fct_revenue` by `metric_month`, `fct_deals` by `close_date_day`, `fct_funnel` by `entered_date`
@@ -87,7 +87,7 @@ flowchart LR
 
 | Layer | Tools |
 |---|---|
-| Sources | HubSpot CRM (free dev portal), mock billing system (Stripe analogue) |
+| Sources | HubSpot CRM (free dev portal), mock billing system |
 | Extraction | Python 3.12, `snowflake-connector-python`, `requests`, `python-dotenv` |
 | Warehouse | Snowflake free trial, 4 schemas (RAW / STAGING / INTERMEDIATE / MARTS), 4 RBAC roles |
 | Transformation | dbt-core 1.8 + dbt-snowflake 1.8 |
@@ -181,7 +181,8 @@ git clone https://github.com/lucaslimaa2/crm-analytics-engineering.git
 cd crm-analytics-engineering
 python -m venv .venv
 .venv/Scripts/Activate.ps1
-pip install -r requirements.txt
+pip install -r requirements-dev.txt    # local + CI deps (includes dbt, Faker, pytest)
+# requirements.txt is the lean dashboard-runtime set used by Streamlit Cloud
 
 # 2. Configure credentials
 Copy-Item .env.example .env

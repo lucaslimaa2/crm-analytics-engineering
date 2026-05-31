@@ -49,7 +49,7 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
       - name: Run weekly seed (POSTs new records + advances state counter)
         run: python -m seed.seed_hubspot --weekly

@@ -44,7 +44,7 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
       - name: Check schema drift vs baseline
         # Surface exit code 2 as a workflow warning but don't fail the build.

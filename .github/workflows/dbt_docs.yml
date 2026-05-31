@@ -1,0 +1,84 @@
+# dbt docs site → GitHub Pages.
+#
+# Generates the lineage graph + per-model docs site and publishes it to
+# https://lucaslimaa2.github.io/crm-analytics-engineering/.
+#
+# Runs on:
+#   - Push to main when anything under dbt/ changes (the docs only need
+#     rebuilding when models or YAMLs change)
+#   - workflow_dispatch for ad-hoc rebuilds
+#
+# Requires GitHub Pages to be enabled on the repo with source set to
+# "GitHub Actions" (Settings -> Pages). First-time setup is a one-click
+# user action; after that this workflow drives everything.
+
+name: dbt_docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "dbt/**"
+      - ".github/workflows/dbt_docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      SNOWFLAKE_ACCOUNT:              ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_WAREHOUSE:            ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+      SNOWFLAKE_DATABASE:             ${{ secrets.SNOWFLAKE_DATABASE }}
+      SNOWFLAKE_USER_TRANSFORMER:     ${{ secrets.SNOWFLAKE_USER_TRANSFORMER }}
+      SNOWFLAKE_PASSWORD_TRANSFORMER: ${{ secrets.SNOWFLAKE_PASSWORD_TRANSFORMER }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate dbt profiles.yml
+        run: cp dbt/profiles.yml.example dbt/profiles.yml
+
+      - name: Generate dbt docs
+        # Queries INFORMATION_SCHEMA for column types — needs Snowflake auth.
+        working-directory: dbt
+        run: dbt docs generate --profiles-dir .
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dbt/target
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

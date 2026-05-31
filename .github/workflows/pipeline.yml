@@ -68,6 +68,12 @@ jobs:
       - name: Extract HubSpot CRM into Snowflake RAW
         run: python -m extract.extract
 
+      - name: Regenerate billing from newly-won deals
+        # Reads RAW.hubspot_deals (just refreshed above), finds any closed-won
+        # deal without a subscription, writes seed/mock_billing.json. Stand-in
+        # for what would be a daily Stripe/Chargebee extraction in production.
+        run: python seed/generate_billing_data.py
+
       - name: Load billing subscriptions into RAW
         run: python -m extract.load_billing
 

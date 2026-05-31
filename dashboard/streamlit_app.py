@@ -1,13 +1,13 @@
 """RevOps analytics dashboard (Phase 12).
 
-Reads metrics from MARTS as the REVOPS_REPORTER role — read-only on MARTS,
+Reads metrics from MARTS as the REVOPS_REPORTER role: read-only on MARTS,
 no access to RAW or STAGING. The role's grants enforce this at the warehouse
 layer: if any chart accidentally references a non-mart table, Snowflake
 refuses the query.
 
 Hard rule: this file reads metrics from `marts.fct_*` tables; it never
 recomputes MRR/ARR/conversion/etc. in pandas. Aggregations (SUM, COUNT,
-MEDIAN) for display are fine — those collapse columns that ALREADY exist in
+MEDIAN) for display are fine because they collapse columns that ALREADY exist in
 the marts. Anything that would redefine a metric (e.g. `deal_amount / 12`)
 belongs in dbt, not here.
 
@@ -64,13 +64,13 @@ def q(sql: str) -> pd.DataFrame:
 
 st.title("RevOps Analytics")
 st.caption(
-    "Live metrics from the warehouse — no recomputation in pandas. Every number "
+    "Live metrics from the warehouse, no recomputation in pandas. Every number "
     "here traces back to a single definition in the dbt mart layer. "
     "Catalog: [models/marts/_metrics.yml](https://github.com/lucaslimaa2/crm-analytics-engineering/blob/main/dbt/models/marts/_metrics.yml)"
 )
 st.divider()
 
-# ─── KPI strip — current-state headline numbers ────────────────────────────
+# ─── KPI strip: current-state headline numbers ────────────────────────────
 
 kpi_revenue = q("""
     SELECT

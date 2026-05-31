@@ -7,13 +7,13 @@
 A Snowflake account left at defaults will quietly burn through credits. The
 top three ways teams lose money:
 
-1. **Warehouses left running** — every second a warehouse is `STARTED`,
+1. **Warehouses left running.** Every second a warehouse is `STARTED`,
    you're paying. A team leaving an XS warehouse on overnight costs a few
    credits per day; a Medium left on for a month costs hundreds.
-2. **Untuned scans on big tables** — without clustering or partitioning,
+2. **Untuned scans on big tables.** Without clustering or partitioning,
    a query that should touch one day's micropartitions scans the whole
    table instead.
-3. **Recomputing things in views that should be tables** — every dashboard
+3. **Recomputing things in views that should be tables.** Every dashboard
    refresh re-executes the whole DAG instead of reading from materialized
    results.
 
@@ -40,15 +40,15 @@ CREATE WAREHOUSE IF NOT EXISTS REVOPS_WH
 **Why XS**: at our data volumes (~200 deals, ~150 contacts), even the dbt
 test suite of 103 tests + the full DAG build completes in ~20 seconds on XS.
 We'd pay for Small or larger compute but get the same throughput because
-the bottleneck isn't compute parallelism — it's Snowflake's per-query
+the bottleneck isn't compute parallelism; it's Snowflake's per-query
 metadata + planning latency.
 
 **Why 60s auto-suspend**: the daily pipeline runs once per day and finishes
 in ~3 minutes. With 60s auto-suspend, the warehouse is up for ~4 minutes
 total per pipeline run. With 600s auto-suspend (the default), we'd add
-10 minutes of paid-for idle to every cron — six free minutes for the human
-to think, but the human isn't there at 06:00 UTC. **60s saves credits with
-zero downside in our usage pattern.**
+10 minutes of paid-for idle to every cron, which is six free minutes for
+the human to think; but the human isn't there at 06:00 UTC. **60s saves
+credits with zero downside in our usage pattern.**
 
 **Why ECONOMY scaling policy**: tells Snowflake to be patient about
 auto-scaling under load. We're never under high concurrent load (one cron
@@ -75,7 +75,7 @@ so clustering adds maintenance cost without scan reduction.
 
 **Honest scale caveat**: at our row counts (41 revenue rows, 200 deals),
 the data fits in a single micropartition. Clustering is **demonstrative**
-here — it's the pattern an interviewer would want to see, not a measurable
+here: it's the pattern an interviewer would want to see, not a measurable
 performance win. At 100M rows, clustering by `metric_month` would let a
 "SUM MRR for March 2026" query scan ~1 month of partitions instead of all
 of them, easily a 10–100x cost reduction.
@@ -116,10 +116,10 @@ for the marts tier.
 
 Four Snowflake roles (`infra/snowflake_setup.sql`):
 
-- `REVOPS_LOADER` — INSERT/UPDATE on RAW only (Python extract scripts)
-- `REVOPS_TRANSFORMER` — RAW read + STAGING/INTERMEDIATE/MARTS write (dbt)
-- `REVOPS_REPORTER` — MARTS read-only (Streamlit + Reverse ETL)
-- `REVOPS_ADMIN` — full control (one-time setup only)
+- `REVOPS_LOADER`: INSERT/UPDATE on RAW only (Python extract scripts)
+- `REVOPS_TRANSFORMER`: RAW read + STAGING/INTERMEDIATE/MARTS write (dbt)
+- `REVOPS_REPORTER`: MARTS read-only (Streamlit + Reverse ETL)
+- `REVOPS_ADMIN`: full control (one-time setup only)
 
 **Cost angle**: bounded blast radius. A misconfigured Streamlit page can't
 accidentally `TRUNCATE` a raw table. A leaked LOADER credential can't read
@@ -131,7 +131,7 @@ to run.**
 
 ## Worked example: finding expensive queries
 
-The canonical Snowflake cost-investigation query — run as `ACCOUNTADMIN`
+The canonical Snowflake cost-investigation query, run as `ACCOUNTADMIN`
 (or any role with `USAGE` on the `SNOWFLAKE` shared database):
 
 ```sql
@@ -157,14 +157,14 @@ LIMIT 20;
 
 ### Reading the output
 
-- **`exec_seconds`** — wall-clock duration. The warehouse was on (and
+- **`exec_seconds`**: wall-clock duration. The warehouse was on (and
   billed) for at least this long.
-- **`gb_scanned`** — bytes physically read from storage. Most direct cost
+- **`gb_scanned`**: bytes physically read from storage. Most direct cost
   driver after compute time.
-- **`scanned_partitions / total_partitions`** — pruning effectiveness.
+- **`scanned_partitions / total_partitions`**: pruning effectiveness.
   If `scanned == total`, your filter didn't help; clustering and/or query
   rewrites are the lever.
-- **`credits_used_cloud_services`** — what Snowflake actually charged for
+- **`credits_used_cloud_services`**: what Snowflake actually charged for
   this query (excluding the warehouse-time meter, which is billed
   separately by warehouse run time).
 
@@ -212,10 +212,10 @@ GROUP BY c.company_id, c.name;
 1. **Fan-out**: every contact appears once per deal at the same company.
    A company with 5 deals and 10 contacts produces a 50-row intermediate
    result before GROUP BY collapses it. SUM(d.amount_usd) gets multiplied
-   by 10 — wrong number, silently.
+   by 10, a wrong number, silently.
 2. **Cost**: that 50-row intermediate is generated for every company.
    At 50 companies × ~4 deals × ~3 contacts average, the join produces
-   ~600 rows just to aggregate down to 50 — 12x amplification.
+   ~600 rows just to aggregate down to 50, a 12x amplification.
 
 ### After: fan-in via pre-aggregated CTEs
 
@@ -269,7 +269,7 @@ data grows. The pattern matters more than the immediate measurable win.
 > **To be filled in after 30 days of daily cron runs.** As of writing,
 > the GitHub Actions workflows have only been live for hours. The
 > `snowflake.account_usage.warehouse_metering_history` query above is
-> the source of truth — run it after a calendar month and paste the
+> the source of truth: run it after a calendar month and paste the
 > daily totals here.
 
 Expected per-day budget (rough estimate based on local development runs):
@@ -307,7 +307,7 @@ If this project's data grew 1000x (real-world enterprise CRM):
 4. **Query-tag every dbt run** with the model name (`dbt_project.yml`
    has a `query-comment` hook) so `query_history` can attribute
    credits to specific models. This makes the QUERY_HISTORY query
-   above 10x more useful — "which model costs us the most" is the
+   above 10x more useful: "which model costs us the most" is the
    first question an engineering manager asks.
 5. **Materialized views** on the most-queried mart aggregates if the
    workload warrants. Snowflake's materialized views auto-refresh and

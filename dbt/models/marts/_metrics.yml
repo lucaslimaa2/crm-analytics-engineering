@@ -1,5 +1,5 @@
 # =============================================================================
-# RevOps Metric Catalog — single source of truth for every metric this
+# RevOps Metric Catalog: single source of truth for every metric this
 # warehouse exposes.
 #
 # Discipline this catalog enforces:
@@ -11,7 +11,7 @@
 #   - Source of truth lives in dbt mart models. This YAML is the catalog that
 #     points at them and documents the why.
 #
-# This file is documentation, not dbt resource config — no version: 2 header,
+# This file is documentation, not dbt resource config: no version: 2 header,
 # no models: block. dbt parser ignores it; humans read it.
 # =============================================================================
 
@@ -35,7 +35,7 @@ metric_catalog:
     notes: |
       mrr_usd = round(amount_usd / 12, 2) regardless of billing_interval.
       Billing interval is payment cadence (annual vs monthly invoice), NOT an
-      MRR input — a customer paying $120k/yr upfront has the same MRR as one
+      MRR input. A customer paying $120k/yr upfront has the same MRR as one
       paying $10k/month. Confusing these is the #1 SaaS MRR mistake.
 
   - name: arr
@@ -51,7 +51,7 @@ metric_catalog:
     owner: revops-data-team
     related: [mrr, acv]
     notes: |
-      ARR = ACV by definition in a subscription model — both represent the
+      ARR = ACV by definition in a subscription model; both represent the
       annualized value of a single contract. The naming difference is audience:
       Finance says ARR, Sales says ACV.
 
@@ -94,7 +94,7 @@ metric_catalog:
     formula: SUM(churned_mrr_usd)
     source_model: marts.fct_revenue
     grain: one row per closed-won deal / subscription
-    filters: "is_churned = TRUE — built into the column (0 if not churned)"
+    filters: "is_churned = TRUE, built into the column (0 if not churned)"
     common_cuts:
       - by metric_month (booked-month attribution)
       - by company_id (which accounts churned)
@@ -118,7 +118,7 @@ metric_catalog:
     owner: revops-data-team
     related: [mrr, churned_mrr]
     notes: |
-      Not a stored column — derived from mrr_usd × (NOT is_churned). The
+      Not a stored column; derived from mrr_usd × (NOT is_churned). The
       complementary half of mrr; the partition is enforced by the singular
       test `assert_mrr_reconciliation`.
 
@@ -171,7 +171,7 @@ metric_catalog:
     owner: revops-data-team
     related: [open_pipeline_value]
     notes: |
-      Open deals are excluded from both numerator AND denominator — including
+      Open deals are excluded from both numerator AND denominator; including
       them would understate the rate. Per-account win_rate already lives in
       fct_account_health; portfolio scalar is recomputed on demand.
 
@@ -184,7 +184,7 @@ metric_catalog:
       COUNT(DISTINCT contact_id) FILTER (lifecycle_stage = 'marketingqualifiedlead')
       ÷ COUNT(DISTINCT contact_id) FILTER (lifecycle_stage = 'lead')
     source_model: marts.fct_funnel
-    grain: one row per (contact, stage entry) — event grain
+    grain: one row per (contact, stage entry); event grain
     filters: can be cut by cohort_month for time-windowed conversion
     common_cuts:
       - overall conversion
@@ -194,7 +194,7 @@ metric_catalog:
     notes: |
       Event grain is what enables cohort cuts ("of leads from March, what
       % became MQL within 90 days?"). A snapshot of current state cannot
-      answer that — by the time you query, the timestamps are gone.
+      answer that, because by the time you query, the timestamps are gone.
 
   - name: mql_to_sql_rate
     label: MQL → SQL Conversion Rate
@@ -212,7 +212,7 @@ metric_catalog:
     notes: |
       The interview-classic metric. A drop in this rate usually signals one of:
       Marketing's MQL bar dropped, Sales rejected more handoffs, or attribution
-      broke. The catalog can't tell you which — it tells you WHERE the number
+      broke. The catalog can't tell you which, but it tells you WHERE the number
       lives so the conversation starts from the same denominator.
 
   - name: sql_to_customer_rate
@@ -231,7 +231,7 @@ metric_catalog:
     notes: |
       The full funnel cumulative conversion lead→customer is the product:
       lead_to_mql_rate × mql_to_sql_rate × sql_to_opportunity_rate × opp_to_customer.
-      We document each leg as its own named metric — never a single bundled
+      We document each leg as its own named metric; never a single bundled
       "funnel conversion" that hides where drop-off actually happens.
 
   - name: median_days_mql_to_sql
@@ -246,7 +246,7 @@ metric_catalog:
     owner: revops-data-team
     related: [mql_to_sql_rate]
     notes: |
-      days_to_convert is pre-computed via LAG window in fct_funnel — measures
+      days_to_convert is pre-computed via LAG window in fct_funnel; measures
       the time spent in the PREVIOUS stage. The "SQL row" carries the MQL→SQL
       duration; this avoids re-running the window function downstream.
 
@@ -272,9 +272,9 @@ metric_catalog:
     owner: revops-data-team
     related: [arr_per_account, open_pipeline_value]
     notes: |
-      Score is clamped to [0, 100] — enforced by `assert_account_health_score_in_range`.
+      Score is clamped to [0, 100], enforced by `assert_account_health_score_in_range`.
       Pushed back to HubSpot via Reverse ETL as the `account_health_score` custom
-      Company property — so Sales sees the same number the dashboard shows.
+      Company property, so Sales sees the same number the dashboard shows.
 
   - name: arr_per_account
     label: ARR per Account
@@ -289,12 +289,12 @@ metric_catalog:
     owner: revops-data-team
     related: [arr, mrr]
     notes: |
-      fct_account_health pre-aggregates this — the catalog points there as the
+      fct_account_health pre-aggregates this; the catalog points there as the
       canonical source. Reverse ETL pushes this exact value to HubSpot's
       `arr_usd` Company property so the CRM stays in sync.
 
 # =============================================================================
-# Glossary — SaaS terminology used in this catalog.
+# Glossary: SaaS terminology used in this catalog.
 # =============================================================================
 
 glossary:
@@ -309,12 +309,12 @@ glossary:
 
   - term: SQO (Sales Qualified Opportunity)
     meaning: |
-      Conceptually equivalent to "Opportunity" in this project — the moment a Deal
+      Conceptually equivalent to "Opportunity" in this project: the moment a Deal
       record is created. HubSpot's default lifecycle does not include a separate
       'SQO' stage; in this catalog, SQO maps to 'opportunity'.
 
   - term: Opportunity / Deal
-    meaning: HubSpot says "Deal", Salesforce says "Opportunity". Same concept — a tracked sales pursuit.
+    meaning: 'HubSpot says "Deal", Salesforce says "Opportunity". Same concept: a tracked sales pursuit.'
 
   - term: Contact
     meaning: Individual person. Lives in HubSpot's Contacts object.

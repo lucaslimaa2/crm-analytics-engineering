@@ -5,7 +5,7 @@ Engineering-facing version: [`dbt/models/marts/_metrics.yml`](../dbt/models/mart
 
 > **Discipline this glossary enforces.** Every metric is defined exactly once,
 > in a single dbt mart model. The dashboard, Reverse ETL, and any ad-hoc query
-> *read* the metric — they don't recompute it. A new slice ("MRR for
+> *read* the metric; they don't recompute it. A new slice ("MRR for
 > enterprise") becomes a new *named* metric, never a redefinition of `mrr`.
 
 ---
@@ -34,7 +34,7 @@ Engineering-facing version: [`dbt/models/marts/_metrics.yml`](../dbt/models/mart
 
 ## Revenue metrics
 
-Sourced from `marts.fct_revenue`. One row per closed-won deal/subscription —
+Sourced from `marts.fct_revenue`. One row per closed-won deal/subscription:
 the join of the billing system (the money) to the CRM (the sales context).
 
 ### MRR
@@ -86,7 +86,7 @@ The portion of total MRR from subscriptions still in active status.
 
 - **Formula:** `Active MRR = SUM(mrr_usd WHERE is_churned = FALSE)`
 - **Source:** derived from `fct_revenue` row-by-row (no stored column)
-- **Why it matters:** this is what an exec means when they say "what's our MRR?" —
+- **Why it matters:** this is what an exec means when they say "what's our MRR?",
   the running-business number, not the cumulative booked number.
 
 ### Churned MRR
@@ -118,7 +118,7 @@ Sum of deal amounts for deals not yet closed (not in `closedwon` or `closedlost`
 
 ### Weighted Pipeline Value
 
-Pipeline value adjusted by each stage's historical win probability — a more
+Pipeline value adjusted by each stage's historical win probability: a more
 honest forecast than raw pipeline.
 
 - **Formula:** `SUM(total_open_value_usd × stage_win_probability)`
@@ -136,7 +136,7 @@ Closed-won deals divided by all closed deals.
 - **Formula:** `COUNT(is_won) ÷ COUNT(is_closed)`
 - **Source:** computed scalar over `fct_deals`, or per-account at
   `fct_account_health.win_rate`
-- **Critical filter:** open deals are excluded from numerator AND denominator —
+- **Critical filter:** open deals are excluded from numerator AND denominator;
   including them would understate the rate.
 
 ---
@@ -145,7 +145,7 @@ Closed-won deals divided by all closed deals.
 
 Sourced from `marts.fct_funnel`. Event grain: one row per (contact, lifecycle
 stage entry). Event grain is what lets us answer time-windowed questions like
-*"Of leads from March, what % became MQL within 90 days?"* — a snapshot of
+*"Of leads from March, what % became MQL within 90 days?"*, which a snapshot of
 current state cannot.
 
 ### Lead → MQL Rate
@@ -161,7 +161,7 @@ Share of MQLs who reach `salesqualifiedlead`. **The classic Marketing↔Sales
 handoff metric.**
 
 - **Formula:** `COUNT(DISTINCT contact_id WHERE stage = 'salesqualifiedlead') ÷ COUNT(DISTINCT contact_id WHERE stage = 'marketingqualifiedlead')`
-- **Interview-classic insight:** a drop in this rate usually signals one of —
+- **Interview-classic insight:** a drop in this rate usually signals one of:
   Marketing lowered its MQL bar, Sales rejected more handoffs, or attribution
   broke. The catalog can't tell you *which*, but it makes sure everyone starts
   the conversation from the same denominator.
@@ -177,11 +177,11 @@ Share of SQLs who eventually become customers.
 
 ### Median Days MQL → SQL
 
-Median time spent in MQL before transitioning to SQL — the handoff *speed*
+Median time spent in MQL before transitioning to SQL: the handoff *speed*
 metric.
 
 - **Formula:** `MEDIAN(days_to_convert) WHERE lifecycle_stage = 'salesqualifiedlead'`
-- **Source:** `fct_funnel.days_to_convert` is pre-computed via a `LAG` window —
+- **Source:** `fct_funnel.days_to_convert` is pre-computed via a `LAG` window;
   the SQL row carries the MQL → SQL duration, the SQL → Opportunity row carries
   the SQL → Opportunity duration, and so on. No need to re-run the window
   function downstream.
@@ -212,7 +212,7 @@ penalty.
 - **Source column:** `fct_account_health.account_health_score`
 - **Round-trip:** this exact value is pushed back to HubSpot via Reverse ETL as
   the `account_health_score` custom Company property. A Sales rep opening the
-  Company in HubSpot sees the same number the dashboard does — no
+  Company in HubSpot sees the same number the dashboard does, ending the
   *"whose number is right?"* conversation.
 - **Invariant:** score is non-NULL and in [0, 100]. Enforced by
   `assert_account_health_score_in_range`.
@@ -234,9 +234,9 @@ Core terms used in this project.
 | Term | Meaning |
 |---|---|
 | **Lead** | Anyone who entered the CRM, not yet qualified. HubSpot stage `lead`. |
-| **MQL** | *Marketing Qualified Lead* — marketing scored as fit + engagement. HubSpot stage `marketingqualifiedlead`. |
-| **SQL** | *Sales Qualified Lead* — sales accepted as worth pursuing. HubSpot stage `salesqualifiedlead`. |
-| **SQO** | *Sales Qualified Opportunity* — conceptually the moment a Deal record is created. HubSpot's default lifecycle has **no separate SQO stage**, so this project treats **SQO ≡ Opportunity** (the `opportunity` stage). |
+| **MQL** | *Marketing Qualified Lead*: marketing scored as fit + engagement. HubSpot stage `marketingqualifiedlead`. |
+| **SQL** | *Sales Qualified Lead*: sales accepted as worth pursuing. HubSpot stage `salesqualifiedlead`. |
+| **SQO** | *Sales Qualified Opportunity*: conceptually the moment a Deal record is created. HubSpot's default lifecycle has **no separate SQO stage**, so this project treats **SQO ≡ Opportunity** (the `opportunity` stage). |
 | **Opportunity / Deal** | HubSpot says *Deal*, Salesforce says *Opportunity*. Same concept: a tracked sales pursuit. |
 | **Contact** | Individual person. Lives in HubSpot's Contacts object. |
 | **Account / Company** | Organization. Lives in HubSpot's Companies object. |
@@ -256,13 +256,13 @@ Three artifacts working together:
    in staging, intermediate, or any downstream consumer.
 
 2. **Catalog points at the definition.** [`_metrics.yml`](../dbt/models/marts/_metrics.yml)
-   is the machine-readable index — every metric, its source mart, formula, owner.
+   is the machine-readable index: every metric, its source mart, formula, owner.
    This file is the engineering-facing equivalent of this glossary.
 
 3. **Tests enforce the invariants.** Three singular tests in [`dbt/tests/`](../dbt/tests/):
-   - `assert_mrr_reconciliation` — active + churned MRR equals total MRR, row-level
-   - `assert_fct_revenue_only_won_deals` — no lost/open deals leak into revenue
-   - `assert_account_health_score_in_range` — score stays in [0, 100]
+   - `assert_mrr_reconciliation`: active + churned MRR equals total MRR, row-level
+   - `assert_fct_revenue_only_won_deals`: no lost/open deals leak into revenue
+   - `assert_account_health_score_in_range`: score stays in [0, 100]
 
    These run as part of `dbt test` in the daily CI pipeline. If any invariant
    breaks, the workflow fails before the dashboard does.
@@ -279,7 +279,7 @@ The mart layer is the source of truth.
 2. Add an entry to `_metrics.yml`.
 3. Add a section here.
 4. If it's a structural invariant, add a singular test in `dbt/tests/`.
-5. Streamlit / Reverse ETL will read it on the next pipeline run — no code
+5. Streamlit / Reverse ETL will read it on the next pipeline run, no code
    change downstream.
 
 A new slice of an existing metric gets its own name (e.g. `mrr_enterprise`,

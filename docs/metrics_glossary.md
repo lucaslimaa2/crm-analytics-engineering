@@ -229,7 +229,7 @@ The active ARR (excludes churned subscriptions) for a single company.
 
 ## SaaS terminology glossary
 
-The terms the JD assumes you know.
+Core terms used in this project.
 
 | Term | Meaning |
 |---|---|

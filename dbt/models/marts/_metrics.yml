@@ -294,7 +294,7 @@ metric_catalog:
       `arr_usd` Company property so the CRM stays in sync.
 
 # =============================================================================
-# Glossary — terminology cross-reference for the JD's SaaS vocabulary.
+# Glossary — SaaS terminology used in this catalog.
 # =============================================================================
 
 glossary:
@@ -311,7 +311,7 @@ glossary:
     meaning: |
       Conceptually equivalent to "Opportunity" in this project — the moment a Deal
       record is created. HubSpot's default lifecycle does not include a separate
-      'SQO' stage; the JD terminology maps onto 'opportunity'.
+      'SQO' stage; in this catalog, SQO maps to 'opportunity'.
 
   - term: Opportunity / Deal
     meaning: HubSpot says "Deal", Salesforce says "Opportunity". Same concept — a tracked sales pursuit.

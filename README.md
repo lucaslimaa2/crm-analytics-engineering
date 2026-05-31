@@ -1,6 +1,6 @@
 # CRM Analytics Engineering
 
-A production-grade RevOps analytics pipeline. **HubSpot CRM** and a **mock billing source** flow through **Snowflake** and **dbt** into seven analytics marts powering a **Streamlit dashboard**. **GitHub Actions** runs the full pipeline daily, **schema drift detection** guards against silent upstream changes, and **Reverse ETL** pushes computed metrics back into HubSpot — closing the loop between analytics and operations.
+A production-grade RevOps analytics pipeline. **HubSpot CRM** and a **mock billing source** flow through **Snowflake** and **dbt** into seven analytics marts powering a **Streamlit dashboard**. **GitHub Actions** runs the full pipeline daily, **schema drift detection** guards against silent upstream changes, and **Reverse ETL** pushes computed metrics back into HubSpot, closing the loop between analytics and operations.
 
 ![Dashboard screenshot](docs/dashboard.png)
 
@@ -17,9 +17,9 @@ A production-grade RevOps analytics pipeline. **HubSpot CRM** and a **mock billi
 
 Most analytics portfolios stop at "I built a dashboard." This project covers the whole pipeline a real RevOps team owns: two upstream sources, the warehouse, the transformation layer, the orchestration, the dashboard, AND the reverse ETL that pushes computed metrics back into the CRM where sales actually work.
 
-Revenue metrics (MRR, ARR, churn) come from the billing source joined to CRM deals — mirroring the real-world split where the CRM owns the sales process and the billing system owns the money. The dashboard never recomputes a metric: every number traces back to a single SQL definition in the dbt mart layer, cataloged in [`_metrics.yml`](dbt/models/marts/_metrics.yml). That discipline ends the "whose MRR is right?" problem.
+Revenue metrics (MRR, ARR, churn) come from the billing source joined to CRM deals, mirroring the real-world split where the CRM owns the sales process and the billing system owns the money. The dashboard never recomputes a metric: every number traces back to a single SQL definition in the dbt mart layer, cataloged in [`_metrics.yml`](dbt/models/marts/_metrics.yml). That discipline ends the "whose MRR is right?" problem.
 
-Everything runs on a free Snowflake trial, a free HubSpot developer portal, and free GitHub Actions minutes — so the architecture is honest about cost trade-offs (X-Small warehouse, 60s auto-suspend, deliberate materialization choices) without pretending to enterprise scale.
+Everything runs on a free Snowflake trial, a free HubSpot developer portal, and free GitHub Actions minutes, so the architecture is honest about cost trade-offs (X-Small warehouse, 60s auto-suspend, deliberate materialization choices) without pretending to enterprise scale.
 
 ---
 
@@ -75,11 +75,11 @@ flowchart LR
 ```
 
 **Highlights:**
-- **Two sources, not one** — HubSpot CRM + billing system, joined at `fct_revenue` (CRM context + billing numbers)
-- **Medallion architecture** — each layer reads only from the previous one; cleaning happens in `intermediate/`, business logic in `marts/`
-- **Seven marts** — `dim_accounts`, `dim_contacts`, `fct_deals`, `fct_pipeline`, `fct_revenue`, `fct_funnel`, `fct_account_health`
-- **Clustering on time-queried facts** — `fct_revenue` by `metric_month`, `fct_deals` by `close_date_day`, `fct_funnel` by `entered_date`
-- **Reverse ETL closes the loop** — health score + ARR pushed back to HubSpot as custom Company properties
+- **Two sources, not one.** HubSpot CRM + billing system, joined at `fct_revenue` (CRM context + billing numbers)
+- **Medallion architecture.** Each layer reads only from the previous one; cleaning happens in `intermediate/`, business logic in `marts/`
+- **Seven marts.** `dim_accounts`, `dim_contacts`, `fct_deals`, `fct_pipeline`, `fct_revenue`, `fct_funnel`, `fct_account_health`
+- **Clustering on time-queried facts.** `fct_revenue` by `metric_month`, `fct_deals` by `close_date_day`, `fct_funnel` by `entered_date`
+- **Reverse ETL closes the loop.** Health score + ARR pushed back to HubSpot as custom Company properties
 
 ---
 
@@ -114,10 +114,10 @@ flowchart LR
 ```
 crm-analytics-engineering/
 ├── .github/workflows/
-│   ├── pipeline.yml             daily 06:00 UTC — full ETL + reverse push
-│   ├── weekly_seed.yml          Mondays 07:00 UTC — adds new mock data
-│   ├── schema_drift.yml         daily 05:30 UTC + on PR — drift detection
-│   └── dbt_docs.yml             on push to dbt/ — publishes lineage to GH Pages
+│   ├── pipeline.yml             daily 06:00 UTC, full ETL + reverse push
+│   ├── weekly_seed.yml          Mondays 07:00 UTC, adds new mock data
+│   ├── schema_drift.yml         daily 05:30 UTC + on PR, drift detection
+│   └── dbt_docs.yml             on push to dbt/, publishes lineage to GH Pages
 ├── infra/
 │   ├── snowflake_setup.sql      warehouses + schemas + roles, idempotent
 │   └── expected_schema.json     committed HubSpot property baseline
@@ -185,7 +185,7 @@ pip install -r requirements.txt
 
 # 2. Configure credentials
 Copy-Item .env.example .env
-# Edit .env — fill in HubSpot key + Snowflake creds for all 4 roles
+# Edit .env: fill in HubSpot key + Snowflake creds for all 4 roles
 
 # 3. Snowflake one-time setup (run in SnowSight as ACCOUNTADMIN)
 # Paste infra/snowflake_setup.sql
@@ -212,7 +212,7 @@ dbt build --profiles-dir .          # 27 models + 103 tests
 # 8. Streamlit dashboard
 cd ..
 Copy-Item .streamlit/secrets.toml.example .streamlit/secrets.toml
-# Edit .streamlit/secrets.toml — fill in REPORTER role creds
+# Edit .streamlit/secrets.toml: fill in REPORTER role creds
 .venv/Scripts/streamlit.exe run dashboard/streamlit_app.py
 ```
 
@@ -239,7 +239,7 @@ Four GitHub Actions workflows in `.github/workflows/`:
 | `schema_drift.yml` | Daily 05:30 UTC + every PR | Catches HubSpot property removals / type changes before extraction breaks |
 | `dbt_docs.yml` | On push to `dbt/` | Rebuilds the lineage site, deploys to GitHub Pages |
 
-All workflows alert via Telegram on failure (PR-triggered runs skip the alert — the PR's checks UI is the right surface).
+All workflows alert via Telegram on failure (PR-triggered runs skip the alert; the PR's checks UI is the right surface).
 
 ### GitHub Secrets needed
 
@@ -255,13 +255,13 @@ gh secret set -f .env    # bulk-upload from your local .env
 
 | Doc | Audience |
 |---|---|
-| [`_metrics.yml`](dbt/models/marts/_metrics.yml) | Engineering — the canonical metric catalog. 16 metrics + SaaS glossary, machine-readable |
-| [`metrics_glossary.md`](docs/metrics_glossary.md) | Stakeholders — narrative version of `_metrics.yml`, ctrl-F-friendly |
-| [`cost_optimization.md`](docs/cost_optimization.md) | Engineering — warehouse sizing, clustering rationale, `QUERY_HISTORY` walkthrough, before/after example |
-| [dbt lineage graph](https://lucaslimaa2.github.io/crm-analytics-engineering/) | Engineering — clickable DAG of every model, column, and test |
+| [`_metrics.yml`](dbt/models/marts/_metrics.yml) | Engineering: the canonical metric catalog. 16 metrics + SaaS glossary, machine-readable |
+| [`metrics_glossary.md`](docs/metrics_glossary.md) | Stakeholders: narrative version of `_metrics.yml`, ctrl-F-friendly |
+| [`cost_optimization.md`](docs/cost_optimization.md) | Engineering: warehouse sizing, clustering rationale, `QUERY_HISTORY` walkthrough, before/after example |
+| [dbt lineage graph](https://lucaslimaa2.github.io/crm-analytics-engineering/) | Engineering: clickable DAG of every model, column, and test |
 
 ---
 
 ## Author
 
-**Lucas Lima** — [LinkedIn](https://www.linkedin.com/in/antoniolucaslima/) · [X / Twitter](https://x.com/LucaslimaVEGA) · [portfolio](https://lucaslima.xyz)
+**Lucas Lima** · [LinkedIn](https://www.linkedin.com/in/antoniolucaslima/) · [X / Twitter](https://x.com/LucaslimaVEGA) · [portfolio](https://lucaslima.xyz)

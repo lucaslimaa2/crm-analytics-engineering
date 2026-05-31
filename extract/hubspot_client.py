@@ -68,6 +68,20 @@ class HubSpotClient:
 
         raise RuntimeError(f"GET {path} retry budget exhausted; last error: {last_error}")
 
+    def get_properties(self, object_type: str) -> list[dict]:
+        """Fetch the live property catalog for a HubSpot object type.
+
+        Returns the raw `results` array from GET /crm/v3/properties/{objectType}.
+        Each element looks like:
+            {"name": "amount", "type": "number", "fieldType": "number",
+             "label": "Amount", "groupName": "dealinformation", ...}
+
+        Used by extract/schema_drift.py to diff live HubSpot against the
+        committed baseline (infra/expected_schema.json).
+        """
+        payload = self._get(f"/crm/v3/properties/{object_type}")
+        return payload.get("results", [])
+
     def iter_objects(
         self,
         object_type: str,

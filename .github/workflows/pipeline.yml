@@ -1,0 +1,94 @@
+# Daily RevOps pipeline.
+#
+# Order (per CLAUDE.md Phase 11.1):
+#   1. dbt source freshness — fails if RAW is older than its SLA (catches a
+#      silently-broken extractor from a prior day BEFORE running another extract).
+#   2. extract.extract — HubSpot CRM -> RAW (as LOADER role).
+#   3. dbt build       — staging -> intermediate -> marts + 103 tests (as TRANSFORMER role).
+#   4. reverse_etl     — fct_account_health -> HubSpot custom properties (as REPORTER role).
+#   5. On any failure  — Telegram ping with a link to the failing run.
+#
+# Day-1 note: source freshness will fail before any extract has run. Bootstrap
+# by triggering the workflow manually (`workflow_dispatch`) once first, OR run
+# `python -m extract.extract` locally to seed RAW before enabling the schedule.
+
+name: pipeline
+
+on:
+  schedule:
+    - cron: "0 6 * * *"        # daily 06:00 UTC
+  workflow_dispatch:           # manual trigger from the Actions tab
+
+concurrency:
+  group: daily-pipeline
+  cancel-in-progress: false    # don't kill an in-flight run; queue the next
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30        # extract+build+reverse ETL runs locally in ~3min
+
+    env:
+      # Snowflake — shared connection info
+      SNOWFLAKE_ACCOUNT:               ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_WAREHOUSE:             ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+      SNOWFLAKE_DATABASE:              ${{ secrets.SNOWFLAKE_DATABASE }}
+      # Per-role creds — least privilege per step
+      SNOWFLAKE_USER_LOADER:           ${{ secrets.SNOWFLAKE_USER_LOADER }}
+      SNOWFLAKE_PASSWORD_LOADER:       ${{ secrets.SNOWFLAKE_PASSWORD_LOADER }}
+      SNOWFLAKE_USER_TRANSFORMER:      ${{ secrets.SNOWFLAKE_USER_TRANSFORMER }}
+      SNOWFLAKE_PASSWORD_TRANSFORMER:  ${{ secrets.SNOWFLAKE_PASSWORD_TRANSFORMER }}
+      SNOWFLAKE_USER_REPORTER:         ${{ secrets.SNOWFLAKE_USER_REPORTER }}
+      SNOWFLAKE_PASSWORD_REPORTER:     ${{ secrets.SNOWFLAKE_PASSWORD_REPORTER }}
+      # HubSpot
+      HUBSPOT_SERVICE_KEY:             ${{ secrets.HUBSPOT_SERVICE_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate dbt profiles.yml from template
+        # profiles.yml is gitignored; the template uses env_var() throughout,
+        # so a copy is all that's needed.
+        run: cp dbt/profiles.yml.example dbt/profiles.yml
+
+      - name: dbt source freshness
+        working-directory: dbt
+        run: dbt source freshness --profiles-dir .
+
+      - name: Extract HubSpot CRM into Snowflake RAW
+        run: python -m extract.extract
+
+      - name: Load billing subscriptions into RAW
+        run: python -m extract.load_billing
+
+      - name: Load lifecycle history into RAW
+        run: python -m extract.load_lifecycle_history
+
+      - name: dbt build (RAW -> STAGING -> INTERMEDIATE -> MARTS, then test)
+        working-directory: dbt
+        run: dbt build --profiles-dir .
+
+      - name: Reverse ETL — push account health back to HubSpot
+        run: python -m reverse_etl.push_to_hubspot
+
+      - name: Notify Telegram on failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          MSG="RevOps pipeline FAILED (run #${{ github.run_number }}). ${RUN_URL}"
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d text="${MSG}"

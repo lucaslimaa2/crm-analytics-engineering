@@ -15,8 +15,8 @@ Dependency order matters for associations:
      an association — they cannot exist standalone)
 
 Usage:
-    python seed/seed_hubspot.py
-    python seed/seed_hubspot.py --weekly       # (not yet implemented)
+    python seed/seed_hubspot.py                # initial full seed (run once)
+    python seed/seed_hubspot.py --weekly       # additive weekly delta (idempotent, week-counter keyed)
 """
 from __future__ import annotations
 
@@ -231,6 +231,70 @@ def build_line_item_input(line_item: dict, products: dict[str, str], deals: dict
     }
 
 
+def run_weekly_seed(client: HubSpotClient, state: dict, mock: dict) -> None:
+    """Weekly delta seed — adds a deterministic batch of new mock entities.
+
+    Idempotent via the state file: each weekly run is keyed by an incrementing
+    `_weekly_run_count` counter persisted in state. Re-running the same run is
+    a no-op (state already has those IDs); the counter only advances on a
+    successful new POST cycle.
+
+    MVP scope (deliberate):
+      - POSTs new companies/contacts/deals/line_items + associations
+      - Does NOT generate lifecycle events for new contacts (they show with
+        terminal lifecyclestage only; funnel will slightly undercount new
+        contacts — acceptable for the portfolio MRR-growth story)
+      - Does NOT advance existing open deals' stages (would require GETting
+        each deal's current stage; future enhancement)
+      - Does NOT re-generate billing data (handled by weekly_seed.yml workflow
+        as a separate step after extract.extract refreshes RAW.hubspot_deals)
+    """
+    # Lazy import — avoids the Faker initialization cost when --weekly isn't used.
+    from seed.generate_mock_data import generate_weekly_batch
+
+    pipeline_path = PROJECT_ROOT / "infra" / "hubspot_pipeline_stages.json"
+    pipelines = json.loads(pipeline_path.read_text(encoding="utf-8"))
+    default = next((p for p in pipelines if p["id"] == "default"), pipelines[0])
+    pipeline_stages = default["stages"]
+
+    week_num = state.get("_weekly_run_count", 0) + 1
+    print(f"\n=== Weekly seed run #{week_num} ===")
+
+    batch = generate_weekly_batch(week_num, mock["companies"], pipeline_stages)
+    print(f"  Generated: {len(batch['companies'])} companies, "
+          f"{len(batch['contacts'])} contacts, "
+          f"{len(batch['deals'])} deals, "
+          f"{len(batch['line_items'])} line items\n")
+
+    print("[1/5] Companies")
+    seed_batch(client, "companies", batch["companies"], state, "companies")
+
+    print("\n[2/5] Contacts (new contacts get terminal lifecyclestage only — see docstring)")
+    seed_batch(client, "contacts", batch["contacts"], state, "contacts",
+               input_builder=build_contact_input)
+
+    print("\n[3/5] Associate contacts -> companies")
+    seed_associations(client, "contacts", "companies",
+                      [(c["_id"], c["_company_id"]) for c in batch["contacts"]],
+                      state, state_key="contacts_companies")
+
+    print("\n[4/5] Deals")
+    seed_batch(client, "deals", batch["deals"], state, "deals")
+
+    print("\n      Associate deals -> companies")
+    seed_associations(client, "deals", "companies",
+                      [(d["_id"], d["_company_id"]) for d in batch["deals"]],
+                      state, state_key="deals_companies")
+
+    print("\n[5/5] Line items (with deal association embedded)")
+    seed_batch(client, "line_items", batch["line_items"], state, "line_items",
+               input_builder=lambda li: build_line_item_input(li, state["products"], state["deals"]))
+
+    state["_weekly_run_count"] = week_num
+    save_state(state)
+    print(f"\nWeek #{week_num} complete.")
+
+
 def run_initial_seed(client: HubSpotClient, mock: dict, state: dict) -> None:
     print("\n[1/7] Products")
     seed_batch(client, "products", mock["products"], state, "products",
@@ -263,11 +327,9 @@ def run_initial_seed(client: HubSpotClient, mock: dict, state: dict) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Seed HubSpot with mock data.")
-    parser.add_argument("--weekly", action="store_true", help="Additive weekly delta seed (not yet implemented)")
+    parser.add_argument("--weekly", action="store_true",
+                        help="Additive weekly delta seed (new companies/contacts/deals, idempotent via state)")
     args = parser.parse_args()
-
-    if args.weekly:
-        raise NotImplementedError("--weekly mode lands after Phase 11 (GitHub Actions weekly_seed.yml)")
 
     load_dotenv(PROJECT_ROOT / ".env")
     key = os.environ.get("HUBSPOT_SERVICE_KEY")
@@ -281,7 +343,11 @@ def main() -> int:
     mock = json.loads(MOCK_DATA_PATH.read_text(encoding="utf-8"))
     state = load_state()
     client = HubSpotClient(key)
-    run_initial_seed(client, mock, state)
+
+    if args.weekly:
+        run_weekly_seed(client, state, mock)
+    else:
+        run_initial_seed(client, mock, state)
 
     print("\nDone. State persisted to", STATE_PATH.name)
     counts = {k: len(v) for k, v in state.items() if isinstance(v, dict) and k != "associations"}

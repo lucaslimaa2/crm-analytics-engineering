@@ -29,9 +29,10 @@ profiles.yml
 # Streamlit
 .streamlit/secrets.toml
 
-# Seed state (HubSpot idempotency tracking)
+# Seed state (legacy; current state file IS committed for CI persistence)
 seed/.seed_state.json
-seed/.hubspot_ids.json
+# Note: seed/.hubspot_ids.json is intentionally tracked — the weekly_seed.yml
+# workflow commits it back after each Monday run so subsequent runs share state.
 
 # Scratch JSON dumps from ad-hoc inspection scripts
 inspect_*.json

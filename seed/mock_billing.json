@@ -2,12 +2,62 @@
   "_meta": {
     "generated_at": "2026-05-27T00:00:00+00:00",
     "seed": 123,
-    "count": 41,
+    "count": 46,
     "source": "mock billing system; won deals read from RAW.hubspot_deals"
   },
   "subscriptions": [
     {
       "subscription_id": "sub_00000",
+      "crm_deal_id": "60742993216",
+      "billing_interval": "monthly",
+      "amount": 10310.63,
+      "term_months": 12,
+      "status": "active",
+      "started_at": "2026-05-18T00:00:00+00:00",
+      "churned_at": null
+    },
+    {
+      "subscription_id": "sub_00001",
+      "crm_deal_id": "60742993222",
+      "billing_interval": "annual",
+      "amount": 160418.79,
+      "term_months": 36,
+      "status": "active",
+      "started_at": "2026-05-09T00:00:00+00:00",
+      "churned_at": null
+    },
+    {
+      "subscription_id": "sub_00002",
+      "crm_deal_id": "60742993217",
+      "billing_interval": "annual",
+      "amount": 3147.75,
+      "term_months": 12,
+      "status": "active",
+      "started_at": "2026-05-07T00:00:00+00:00",
+      "churned_at": null
+    },
+    {
+      "subscription_id": "sub_00003",
+      "crm_deal_id": "60742993218",
+      "billing_interval": "annual",
+      "amount": 142506.86,
+      "term_months": 12,
+      "status": "active",
+      "started_at": "2026-04-28T00:00:00+00:00",
+      "churned_at": null
+    },
+    {
+      "subscription_id": "sub_00004",
+      "crm_deal_id": "60742993220",
+      "billing_interval": "monthly",
+      "amount": 3000.58,
+      "term_months": 12,
+      "status": "active",
+      "started_at": "2026-04-28T00:00:00+00:00",
+      "churned_at": null
+    },
+    {
+      "subscription_id": "sub_00005",
       "crm_deal_id": "60650181255",
       "billing_interval": "monthly",
       "amount": 197160.41,
@@ -17,17 +67,17 @@
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00001",
+      "subscription_id": "sub_00006",
       "crm_deal_id": "60650181257",
       "billing_interval": "annual",
       "amount": 19138.85,
-      "term_months": 12,
-      "status": "active",
+      "term_months": 36,
+      "status": "churned",
       "started_at": "2025-07-12T23:10:02+00:00",
-      "churned_at": null
+      "churned_at": "2026-03-28T23:10:02+00:00"
     },
     {
-      "subscription_id": "sub_00002",
+      "subscription_id": "sub_00007",
       "crm_deal_id": "60650181264",
       "billing_interval": "annual",
       "amount": 8131.34,
@@ -37,39 +87,39 @@
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00003",
+      "subscription_id": "sub_00008",
       "crm_deal_id": "60650181265",
-      "billing_interval": "annual",
+      "billing_interval": "monthly",
       "amount": 106458.77,
-      "term_months": 24,
+      "term_months": 12,
       "status": "active",
       "started_at": "2025-11-05T14:53:27+00:00",
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00004",
+      "subscription_id": "sub_00009",
       "crm_deal_id": "60650181266",
-      "billing_interval": "monthly",
+      "billing_interval": "annual",
       "amount": 64037.28,
-      "term_months": 24,
+      "term_months": 12,
       "status": "active",
       "started_at": "2025-08-27T10:16:53+00:00",
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00005",
+      "subscription_id": "sub_00010",
       "crm_deal_id": "60650181269",
-      "billing_interval": "monthly",
+      "billing_interval": "annual",
       "amount": 1306.19,
       "term_months": 12,
-      "status": "churned",
+      "status": "active",
       "started_at": "2025-11-18T08:54:09+00:00",
-      "churned_at": "2025-12-29T08:54:09+00:00"
+      "churned_at": null
     },
     {
-      "subscription_id": "sub_00006",
+      "subscription_id": "sub_00011",
       "crm_deal_id": "60650181283",
-      "billing_interval": "annual",
+      "billing_interval": "monthly",
       "amount": 18931.18,
       "term_months": 12,
       "status": "active",
@@ -77,7 +127,7 @@
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00007",
+      "subscription_id": "sub_00012",
       "crm_deal_id": "60650181286",
       "billing_interval": "annual",
       "amount": 20291.33,
@@ -87,9 +137,9 @@
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00008",
+      "subscription_id": "sub_00013",
       "crm_deal_id": "60650181293",
-      "billing_interval": "annual",
+      "billing_interval": "monthly",
       "amount": 1812297.9,
       "term_months": 12,
       "status": "active",
@@ -97,17 +147,17 @@
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00009",
+      "subscription_id": "sub_00014",
       "crm_deal_id": "60650181301",
       "billing_interval": "annual",
       "amount": 144441.78,
-      "term_months": 24,
+      "term_months": 12,
       "status": "active",
       "started_at": "2026-05-15T14:14:55+00:00",
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00010",
+      "subscription_id": "sub_00015",
       "crm_deal_id": "60650181302",
       "billing_interval": "annual",
       "amount": 218616.3,
@@ -117,9 +167,9 @@
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00011",
+      "subscription_id": "sub_00016",
       "crm_deal_id": "60650181303",
-      "billing_interval": "monthly",
+      "billing_interval": "annual",
       "amount": 103609.43,
       "term_months": 12,
       "status": "active",
@@ -127,9 +177,9 @@
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00012",
+      "subscription_id": "sub_00017",
       "crm_deal_id": "60650181378",
-      "billing_interval": "annual",
+      "billing_interval": "monthly",
       "amount": 59814.29,
       "term_months": 12,
       "status": "active",
@@ -137,29 +187,29 @@
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00013",
+      "subscription_id": "sub_00018",
       "crm_deal_id": "60650181381",
       "billing_interval": "annual",
       "amount": 165566.61,
-      "term_months": 12,
+      "term_months": 24,
       "status": "active",
       "started_at": "2026-02-02T21:19:40+00:00",
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00014",
+      "subscription_id": "sub_00019",
       "crm_deal_id": "60650181386",
-      "billing_interval": "monthly",
+      "billing_interval": "annual",
       "amount": 77701.71,
-      "term_months": 24,
+      "term_months": 12,
       "status": "active",
       "started_at": "2026-04-29T14:24:48+00:00",
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00015",
+      "subscription_id": "sub_00020",
       "crm_deal_id": "60650181394",
-      "billing_interval": "annual",
+      "billing_interval": "monthly",
       "amount": 150712.8,
       "term_months": 12,
       "status": "active",
@@ -167,19 +217,19 @@
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00016",
+      "subscription_id": "sub_00021",
       "crm_deal_id": "60650181404",
       "billing_interval": "monthly",
       "amount": 34747.59,
       "term_months": 12,
-      "status": "active",
+      "status": "churned",
       "started_at": "2025-07-28T16:35:41+00:00",
-      "churned_at": null
+      "churned_at": "2025-10-11T16:35:41+00:00"
     },
     {
-      "subscription_id": "sub_00017",
+      "subscription_id": "sub_00022",
       "crm_deal_id": "60650181408",
-      "billing_interval": "monthly",
+      "billing_interval": "annual",
       "amount": 98827.53,
       "term_months": 24,
       "status": "active",
@@ -187,39 +237,39 @@
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00018",
+      "subscription_id": "sub_00023",
       "crm_deal_id": "60650181410",
       "billing_interval": "annual",
       "amount": 1841818.26,
-      "term_months": 12,
+      "term_months": 36,
       "status": "active",
       "started_at": "2026-01-23T05:14:31+00:00",
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00019",
+      "subscription_id": "sub_00024",
       "crm_deal_id": "60650181412",
       "billing_interval": "annual",
       "amount": 203316.88,
-      "term_months": 12,
+      "term_months": 24,
       "status": "active",
       "started_at": "2025-12-18T13:31:47+00:00",
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00020",
+      "subscription_id": "sub_00025",
       "crm_deal_id": "60650181414",
-      "billing_interval": "annual",
+      "billing_interval": "monthly",
       "amount": 49025.2,
       "term_months": 12,
-      "status": "churned",
+      "status": "active",
       "started_at": "2025-06-27T23:43:22+00:00",
-      "churned_at": "2026-01-29T23:43:22+00:00"
+      "churned_at": null
     },
     {
-      "subscription_id": "sub_00021",
+      "subscription_id": "sub_00026",
       "crm_deal_id": "60650456396",
-      "billing_interval": "annual",
+      "billing_interval": "monthly",
       "amount": 128255.76,
       "term_months": 12,
       "status": "active",
@@ -227,9 +277,9 @@
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00022",
+      "subscription_id": "sub_00027",
       "crm_deal_id": "60650456405",
-      "billing_interval": "monthly",
+      "billing_interval": "annual",
       "amount": 2440.77,
       "term_months": 12,
       "status": "active",
@@ -237,107 +287,107 @@
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00023",
+      "subscription_id": "sub_00028",
       "crm_deal_id": "60650456416",
-      "billing_interval": "monthly",
+      "billing_interval": "annual",
       "amount": 4110.91,
-      "term_months": 24,
-      "status": "active",
+      "term_months": 12,
+      "status": "churned",
       "started_at": "2025-08-15T20:21:23+00:00",
-      "churned_at": null
+      "churned_at": "2026-04-06T20:21:23+00:00"
     },
     {
-      "subscription_id": "sub_00024",
+      "subscription_id": "sub_00029",
       "crm_deal_id": "60650456417",
       "billing_interval": "annual",
       "amount": 13692.26,
-      "term_months": 24,
+      "term_months": 12,
       "status": "active",
       "started_at": "2026-01-27T03:45:14+00:00",
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00025",
+      "subscription_id": "sub_00030",
       "crm_deal_id": "60650456420",
-      "billing_interval": "monthly",
+      "billing_interval": "annual",
       "amount": 29743.57,
       "term_months": 12,
-      "status": "active",
+      "status": "churned",
       "started_at": "2025-11-06T09:06:15+00:00",
-      "churned_at": null
+      "churned_at": "2026-03-06T09:06:15+00:00"
     },
     {
-      "subscription_id": "sub_00026",
+      "subscription_id": "sub_00031",
       "crm_deal_id": "60650456421",
       "billing_interval": "annual",
       "amount": 18059.54,
       "term_months": 24,
-      "status": "churned",
+      "status": "active",
       "started_at": "2025-06-30T08:04:12+00:00",
-      "churned_at": "2025-11-05T08:04:12+00:00"
+      "churned_at": null
     },
     {
-      "subscription_id": "sub_00027",
+      "subscription_id": "sub_00032",
       "crm_deal_id": "60650456426",
-      "billing_interval": "monthly",
+      "billing_interval": "annual",
       "amount": 127850.56,
-      "term_months": 12,
+      "term_months": 24,
       "status": "active",
       "started_at": "2026-03-11T18:33:22+00:00",
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00028",
+      "subscription_id": "sub_00033",
       "crm_deal_id": "60650456428",
       "billing_interval": "annual",
       "amount": 2347.84,
-      "term_months": 36,
-      "status": "churned",
+      "term_months": 24,
+      "status": "active",
       "started_at": "2026-02-27T15:25:31+00:00",
-      "churned_at": "2026-05-07T15:25:31+00:00"
+      "churned_at": null
     },
     {
-      "subscription_id": "sub_00029",
+      "subscription_id": "sub_00034",
       "crm_deal_id": "60650456434",
       "billing_interval": "annual",
       "amount": 1807.78,
-      "term_months": 12,
-      "status": "churned",
+      "term_months": 36,
+      "status": "active",
       "started_at": "2025-11-06T05:19:18+00:00",
-      "churned_at": "2026-03-26T05:19:18+00:00"
+      "churned_at": null
     },
     {
-      "subscription_id": "sub_00030",
+      "subscription_id": "sub_00035",
       "crm_deal_id": "60650456451",
-      "billing_interval": "monthly",
+      "billing_interval": "annual",
       "amount": 23466.98,
-      "term_months": 36,
+      "term_months": 12,
       "status": "active",
       "started_at": "2026-02-02T00:46:56+00:00",
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00031",
+      "subscription_id": "sub_00036",
       "crm_deal_id": "60650456454",
-      "billing_interval": "annual",
+      "billing_interval": "monthly",
       "amount": 246177.69,
       "term_months": 12,
       "status": "churned",
       "started_at": "2025-11-12T14:28:30+00:00",
-      "churned_at": "2026-03-04T14:28:30+00:00"
+      "churned_at": "2026-01-17T14:28:30+00:00"
     },
     {
-      "subscription_id": "sub_00032",
+      "subscription_id": "sub_00037",
       "crm_deal_id": "60650456457",
       "billing_interval": "annual",
       "amount": 2382.86,
       "term_months": 12,
-      "status": "active",
+      "status": "churned",
       "started_at": "2026-01-15T01:53:48+00:00",
-      "churned_at": null
+      "churned_at": "2026-05-05T01:53:48+00:00"
     },
     {
-      "subscription_id": "sub_00033",
+      "subscription_id": "sub_00038",
       "crm_deal_id": "60650456473",
       "billing_interval": "annual",
       "amount": 15598.46,
@@ -347,27 +397,27 @@
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00034",
+      "subscription_id": "sub_00039",
       "crm_deal_id": "60650456474",
-      "billing_interval": "monthly",
+      "billing_interval": "annual",
       "amount": 129812.47,
-      "term_months": 36,
+      "term_months": 12,
       "status": "active",
       "started_at": "2025-06-22T01:41:08+00:00",
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00035",
+      "subscription_id": "sub_00040",
       "crm_deal_id": "60650456479",
       "billing_interval": "annual",
       "amount": 542.58,
       "term_months": 24,
-      "status": "active",
+      "status": "churned",
       "started_at": "2025-07-01T19:51:18+00:00",
-      "churned_at": null
+      "churned_at": "2026-01-19T19:51:18+00:00"
     },
     {
-      "subscription_id": "sub_00036",
+      "subscription_id": "sub_00041",
       "crm_deal_id": "60650456480",
       "billing_interval": "annual",
       "amount": 33868.63,
@@ -377,19 +427,19 @@
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00037",
+      "subscription_id": "sub_00042",
       "crm_deal_id": "60650456485",
       "billing_interval": "annual",
       "amount": 586.55,
       "term_months": 12,
-      "status": "active",
+      "status": "churned",
       "started_at": "2025-11-24T12:40:56+00:00",
-      "churned_at": null
+      "churned_at": "2025-12-29T12:40:56+00:00"
     },
     {
-      "subscription_id": "sub_00038",
+      "subscription_id": "sub_00043",
       "crm_deal_id": "60650456488",
-      "billing_interval": "annual",
+      "billing_interval": "monthly",
       "amount": 248677.82,
       "term_months": 12,
       "status": "active",
@@ -397,21 +447,21 @@
       "churned_at": null
     },
     {
-      "subscription_id": "sub_00039",
+      "subscription_id": "sub_00044",
       "crm_deal_id": "60650456489",
       "billing_interval": "annual",
       "amount": 131514.95,
-      "term_months": 24,
-      "status": "churned",
+      "term_months": 36,
+      "status": "active",
       "started_at": "2026-03-19T14:57:26+00:00",
-      "churned_at": "2026-05-09T14:57:26+00:00"
+      "churned_at": null
     },
     {
-      "subscription_id": "sub_00040",
+      "subscription_id": "sub_00045",
       "crm_deal_id": "60650456490",
       "billing_interval": "annual",
       "amount": 8852.63,
-      "term_months": 12,
+      "term_months": 24,
       "status": "active",
       "started_at": "2026-01-23T11:53:33+00:00",
       "churned_at": null

@@ -1,0 +1,160 @@
+{
+  "companies": {
+    "annualrevenue": {
+      "fieldType": "number",
+      "type": "number"
+    },
+    "city": {
+      "fieldType": "text",
+      "type": "string"
+    },
+    "country": {
+      "fieldType": "text",
+      "type": "string"
+    },
+    "createdate": {
+      "fieldType": "date",
+      "type": "datetime"
+    },
+    "domain": {
+      "fieldType": "text",
+      "type": "string"
+    },
+    "hs_lastmodifieddate": {
+      "fieldType": "date",
+      "type": "datetime"
+    },
+    "industry": {
+      "fieldType": "select",
+      "type": "enumeration"
+    },
+    "name": {
+      "fieldType": "text",
+      "type": "string"
+    },
+    "numberofemployees": {
+      "fieldType": "number",
+      "type": "number"
+    }
+  },
+  "contacts": {
+    "createdate": {
+      "fieldType": "date",
+      "type": "datetime"
+    },
+    "email": {
+      "fieldType": "text",
+      "type": "string"
+    },
+    "firstname": {
+      "fieldType": "text",
+      "type": "string"
+    },
+    "hs_lastmodifieddate": {
+      "fieldType": "date",
+      "type": "datetime"
+    },
+    "jobtitle": {
+      "fieldType": "text",
+      "type": "string"
+    },
+    "lastname": {
+      "fieldType": "text",
+      "type": "string"
+    },
+    "lifecyclestage": {
+      "fieldType": "radio",
+      "type": "enumeration"
+    },
+    "phone": {
+      "fieldType": "phonenumber",
+      "type": "string"
+    }
+  },
+  "deals": {
+    "amount": {
+      "fieldType": "number",
+      "type": "number"
+    },
+    "closedate": {
+      "fieldType": "date",
+      "type": "datetime"
+    },
+    "createdate": {
+      "fieldType": "date",
+      "type": "datetime"
+    },
+    "dealname": {
+      "fieldType": "text",
+      "type": "string"
+    },
+    "dealstage": {
+      "fieldType": "radio",
+      "type": "enumeration"
+    },
+    "dealtype": {
+      "fieldType": "radio",
+      "type": "enumeration"
+    },
+    "hs_lastmodifieddate": {
+      "fieldType": "date",
+      "type": "datetime"
+    },
+    "pipeline": {
+      "fieldType": "select",
+      "type": "enumeration"
+    }
+  },
+  "line_items": {
+    "amount": {
+      "fieldType": "calculation_equation",
+      "type": "number"
+    },
+    "createdate": {
+      "fieldType": "date",
+      "type": "datetime"
+    },
+    "hs_lastmodifieddate": {
+      "fieldType": "date",
+      "type": "datetime"
+    },
+    "hs_product_id": {
+      "fieldType": "number",
+      "type": "number"
+    },
+    "name": {
+      "fieldType": "text",
+      "type": "string"
+    },
+    "price": {
+      "fieldType": "number",
+      "type": "number"
+    },
+    "quantity": {
+      "fieldType": "number",
+      "type": "number"
+    }
+  },
+  "products": {
+    "createdate": {
+      "fieldType": "date",
+      "type": "datetime"
+    },
+    "hs_lastmodifieddate": {
+      "fieldType": "date",
+      "type": "datetime"
+    },
+    "hs_sku": {
+      "fieldType": "text",
+      "type": "string"
+    },
+    "name": {
+      "fieldType": "text",
+      "type": "string"
+    },
+    "price": {
+      "fieldType": "number",
+      "type": "number"
+    }
+  }
+}

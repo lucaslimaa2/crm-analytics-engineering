@@ -223,6 +223,130 @@ def generate_deals(companies, pipeline_stages):
     return out
 
 
+WEEKLY_NEW_COMPANIES = 3
+WEEKLY_NEW_CONTACTS = 8
+WEEKLY_NEW_DEALS = 8
+
+
+def generate_weekly_batch(week_num: int, existing_companies: list[dict], pipeline_stages: list[dict]) -> dict:
+    """Generate a deterministic weekly delta of new mock CRM data.
+
+    Used by seed_hubspot.py --weekly to simulate an active CRM growing over time.
+    Same record shapes as the initial generators but smaller volumes and IDs
+    prefixed with `w{week_num}_` to distinguish from the initial seed and from
+    other weeks. RNG seeded with SEED + week_num so each week is deterministic
+    but distinct; re-running the same week reproduces identical data (which the
+    seed_hubspot state file then dedups).
+
+    Some new contacts/deals attach to existing companies (expansion / renewal
+    scenarios), some to newly-created companies (pure new business). New deals
+    bias slightly toward CLOSED (50% vs the initial seed's 40%) so MRR visibly
+    grows week over week in the dashboard.
+    """
+    rng = random.Random(SEED + week_num)
+    faker = Faker()
+    Faker.seed(SEED + week_num)
+
+    # ── New companies ──────────────────────────────────────────────────────
+    new_companies = []
+    for i in range(WEEKLY_NEW_COMPANIES):
+        size = rng.choices(SIZE_TIERS, weights=SIZE_WEIGHTS, k=1)[0]
+        new_companies.append({
+            "_id": f"c_w{week_num}_{i}",
+            "_size_tier": size["name"],
+            "name": faker.unique.company(),
+            "domain": faker.unique.domain_name(),
+            "industry": rng.choices(INDUSTRIES, weights=INDUSTRY_WEIGHTS, k=1)[0],
+            "numberofemployees": rng.randint(*size["employees"]),
+            "annualrevenue": rng.randint(*size["revenue"]),
+            "city": faker.city(),
+            "country": "United States",
+        })
+
+    # ── New contacts — mix of new + existing companies ─────────────────────
+    pool = new_companies + existing_companies
+    new_contacts = []
+    for i in range(WEEKLY_NEW_CONTACTS):
+        company = rng.choice(pool)
+        first = faker.first_name()
+        last = faker.last_name()
+        new_contacts.append({
+            "_id": f"p_w{week_num}_{i}",
+            "_company_id": company["_id"],
+            "_terminal_stage": rng.choices(LIFECYCLE_STAGES, weights=LIFECYCLE_TERMINAL_WEIGHTS, k=1)[0],
+            "firstname": first,
+            "lastname": last,
+            "email": f"{first.lower()}.{last.lower()}.w{week_num}_{i}@{company['domain']}",
+            "jobtitle": faker.job(),
+            "phone": faker.phone_number(),
+        })
+
+    # ── New deals — mix of new + existing companies; ~50% close ────────────
+    open_stages = [s["id"] for s in pipeline_stages if str(s["isClosed"]).lower() != "true"]
+    new_deals = []
+    for i in range(WEEKLY_NEW_DEALS):
+        company = rng.choice(pool)
+        size = next(s for s in SIZE_TIERS if s["name"] == company["_size_tier"])
+        subtype = rng.choices(DEAL_SUBTYPES, weights=DEAL_SUBTYPE_WEIGHTS, k=1)[0]
+        hubspot_dealtype = "newbusiness" if subtype == "newbusiness" else "existingbusiness"
+        billing = rng.choices(BILLING_INTERVALS, weights=BILLING_INTERVAL_WEIGHTS, k=1)[0]
+
+        is_closed = rng.random() < 0.50
+        if is_closed:
+            is_won = rng.random() < 0.65
+            stage_id = "closedwon" if is_won else "closedlost"
+            close_date_dt = NOW + timedelta(days=rng.randint(-30, 0))
+        else:
+            stage_id = rng.choice(open_stages)
+            close_date_dt = NOW + timedelta(days=rng.randint(14, 180))
+
+        amount = round(rng.uniform(*size["deal"]), 2)
+        if billing == "monthly":
+            amount = round(amount / 12, 2)
+
+        type_label = {"newbusiness": "New Business", "expansion": "Expansion", "renewal": "Renewal"}[subtype]
+        new_deals.append({
+            "_id": f"d_w{week_num}_{i}",
+            "_company_id": company["_id"],
+            "_subtype": subtype,
+            "_billing_interval": billing,
+            "_is_closed": is_closed,
+            "dealname": f"{company['name']} - {type_label} (W{week_num})",
+            "amount": amount,
+            "dealstage": stage_id,
+            "dealtype": hubspot_dealtype,
+            "pipeline": "default",
+            "closedate": iso(close_date_dt),
+        })
+
+    # ── Line items for new deals ───────────────────────────────────────────
+    new_line_items = []
+    item_idx = 0
+    for d in new_deals:
+        n_items = rng.randint(1, 3)
+        for _ in range(n_items):
+            product = rng.choice(PRODUCTS)
+            qty = rng.randint(1, 20)
+            unit_price = round(product["price"] * rng.uniform(0.8, 1.3), 2)
+            new_line_items.append({
+                "_id": f"li_w{week_num}_{item_idx}",
+                "_deal_id": d["_id"],
+                "_product_sku": product["sku"],
+                "name": product["name"],
+                "quantity": qty,
+                "price": unit_price,
+                "amount": round(qty * unit_price, 2),
+            })
+            item_idx += 1
+
+    return {
+        "companies": new_companies,
+        "contacts": new_contacts,
+        "deals": new_deals,
+        "line_items": new_line_items,
+    }
+
+
 def generate_line_items(deals):
     out = []
     item_idx = 0

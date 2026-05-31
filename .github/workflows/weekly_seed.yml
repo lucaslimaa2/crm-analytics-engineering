@@ -1,0 +1,81 @@
+# Weekly seed — simulates an active CRM by POSTing a small new batch of
+# companies/contacts/deals to HubSpot each Monday.
+#
+# Adds ~3 companies, ~8 contacts, ~8 deals (about half close, mostly won).
+# Each weekly run advances `_weekly_run_count` in seed/.hubspot_ids.json;
+# the run is keyed by that counter so re-running the same week is a no-op
+# (state-file dedup).
+#
+# Flow:
+#   1. Run seed.seed_hubspot --weekly (POSTs new records to HubSpot, updates state file)
+#   2. Commit the updated state file back to the repo as github-actions[bot]
+#      so subsequent runs share state.
+#   3. The daily pipeline (pipeline.yml) the next morning picks up the new
+#      records via extract.extract and rebuilds marts.
+#
+# State persistence: this workflow MUTATES seed/.hubspot_ids.json and pushes
+# the change back. Requires `permissions: contents: write`.
+
+name: weekly_seed
+
+on:
+  schedule:
+    - cron: "0 7 * * 1"          # Mondays 07:00 UTC
+  workflow_dispatch:              # manual trigger from the Actions tab
+
+concurrency:
+  group: weekly-seed
+  cancel-in-progress: false       # don't kill an in-flight seed; queue the next
+
+permissions:
+  contents: write                 # needed to commit state file back
+
+jobs:
+  weekly-seed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      HUBSPOT_SERVICE_KEY: ${{ secrets.HUBSPOT_SERVICE_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run weekly seed (POSTs new records + advances state counter)
+        run: python -m seed.seed_hubspot --weekly
+
+      - name: Commit updated state file back to the repo
+        # Only commits if .hubspot_ids.json actually changed (it always should
+        # after a successful weekly run, but the check is a safety net).
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add seed/.hubspot_ids.json
+          if git diff --cached --quiet; then
+            echo "No state changes to commit."
+          else
+            git commit -m "chore(seed): weekly state snapshot (run #${{ github.run_number }})"
+            git push
+          fi
+
+      - name: Notify Telegram on failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          MSG="Weekly seed FAILED (run #${{ github.run_number }}). ${RUN_URL}"
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d text="${MSG}"

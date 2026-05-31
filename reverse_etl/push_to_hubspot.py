@@ -52,17 +52,16 @@ def chunked(items: list, size: int):
         yield items[i : i + size]
 
 
-def main() -> int:
-    load_dotenv(PROJECT_ROOT / ".env")
-    key = os.environ.get("HUBSPOT_SERVICE_KEY")
-    if not key:
-        print("ERROR: HUBSPOT_SERVICE_KEY not set in .env", file=sys.stderr)
-        return 1
+def rows_to_inputs(rows: list[tuple], synced_at_ms: int) -> list[dict]:
+    """Convert (company_id, arr_usd, open_pipeline_usd, health_score) tuples
+    into HubSpot batch-update input dicts.
 
-    rows = fetch_account_health()
-    synced_at_ms = int(time.time() * 1000)  # HubSpot datetime properties take epoch milliseconds
-
-    inputs = [
+    HubSpot accepts string-typed numeric values for `number` properties (it parses
+    them server-side); we cast explicitly to avoid Decimal -> JSON surprises.
+    `last_synced_from_warehouse` is epoch milliseconds — HubSpot's datetime
+    property wire format.
+    """
+    return [
         {
             "id": company_id,
             "properties": {
@@ -75,28 +74,47 @@ def main() -> int:
         for company_id, arr_usd, open_pipeline_usd, health_score in rows
     ]
 
+
+def post_batch_with_retry(session: requests.Session, batch: list[dict]) -> None:
+    """POST one batch to HubSpot's batch-update endpoint with 429 retry.
+    Returns on success (2xx). Raises RuntimeError on non-retriable errors or
+    after the retry budget is exhausted.
+    """
+    for _ in range(MAX_RETRIES):
+        resp = session.post(
+            f"{API_BASE}/crm/v3/objects/companies/batch/update",
+            json={"inputs": batch},
+            timeout=30,
+        )
+        if resp.status_code == 429:
+            wait = int(resp.headers.get("Retry-After", "10"))
+            print(f"  rate limited, sleeping {wait}s", file=sys.stderr)
+            time.sleep(wait)
+            continue
+        if resp.status_code in (200, 201, 207):
+            return
+        raise RuntimeError(f"batch update failed: HTTP {resp.status_code}\n{resp.text}")
+    raise RuntimeError("batch update retry budget exhausted")
+
+
+def main() -> int:
+    load_dotenv(PROJECT_ROOT / ".env")
+    key = os.environ.get("HUBSPOT_SERVICE_KEY")
+    if not key:
+        print("ERROR: HUBSPOT_SERVICE_KEY not set in .env", file=sys.stderr)
+        return 1
+
+    rows = fetch_account_health()
+    synced_at_ms = int(time.time() * 1000)
+    inputs = rows_to_inputs(rows, synced_at_ms)
+
     session = requests.Session()
     session.headers.update({"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
 
     updated = 0
     for batch in chunked(inputs, BATCH_SIZE):
-        for attempt in range(MAX_RETRIES):
-            resp = session.post(
-                f"{API_BASE}/crm/v3/objects/companies/batch/update",
-                json={"inputs": batch},
-                timeout=30,
-            )
-            if resp.status_code == 429:
-                wait = int(resp.headers.get("Retry-After", "10"))
-                print(f"  rate limited, sleeping {wait}s", file=sys.stderr)
-                time.sleep(wait)
-                continue
-            if resp.status_code in (200, 201, 207):
-                updated += len(batch)
-                break
-            raise RuntimeError(f"batch update failed: HTTP {resp.status_code}\n{resp.text}")
-        else:
-            raise RuntimeError("batch update retry budget exhausted")
+        post_batch_with_retry(session, batch)
+        updated += len(batch)
         time.sleep(0.2)
 
     print(f"Reverse ETL: pushed health metrics to {updated} HubSpot companies")

@@ -3,6 +3,9 @@
 # For local dev + CI (extract, dbt, tests), install requirements-dev.txt.
 
 snowflake-connector-python==3.12.3
+# Force a pyOpenSSL recent enough for OpenSSL 3.x on the Linux runner;
+# older versions reference removed X509 flags and crash at import time.
+pyOpenSSL>=24.3.0
 streamlit==1.39.0
 pandas==2.2.3
 plotly==5.24.1

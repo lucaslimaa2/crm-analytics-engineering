@@ -17,9 +17,7 @@ top three ways teams lose money:
    refresh re-executes the whole DAG instead of reading from materialized
    results.
 
-This project addresses all three explicitly. None of the optimizations are
-clever; they're the ones every RevOps team needs to get right *before*
-anything fancy.
+This project addresses all three explicitly.
 
 ---
 

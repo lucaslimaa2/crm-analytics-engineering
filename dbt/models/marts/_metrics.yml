@@ -329,4 +329,4 @@ glossary:
     meaning: A new deal with an existing customer (cross-sell / upsell).
 
   - term: Renewal
-    meaning: A continuation deal with an existing customer. HubSpot's default dealtype enum has no native 'renewal' value, so our seed maps it onto 'existingbusiness' and preserves the finer distinction in a `_subtype` metadata field.
+    meaning: A continuation deal with an existing customer. HubSpot's default dealtype enum has no native 'renewal' value, so the seed maps it onto 'existingbusiness' and preserves the finer distinction in a `_subtype` metadata field.

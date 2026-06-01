@@ -14,15 +14,15 @@ Engineering-facing version: [`dbt/models/marts/_metrics.yml`](../dbt/models/mart
 
 | Metric | What it answers | Source mart |
 |---|---|---|
-| [MRR](#mrr) | What's our monthly recurring revenue? | `marts.fct_revenue` |
-| [ARR](#arr) | What's our annualized recurring revenue? | `marts.fct_revenue` |
-| [ACV](#acv) | What's the average deal worth annually? | `marts.fct_revenue` |
-| [TCV](#tcv) | What's the full contract value over its term? | `marts.fct_revenue` |
-| [Active MRR](#active-mrr) | What's our MRR excluding churned customers? | `marts.fct_revenue` |
-| [Churned MRR](#churned-mrr) | How much MRR did we lose to churn? | `marts.fct_revenue` |
-| [Open Pipeline Value](#open-pipeline-value) | How much is in the pipeline right now? | `marts.fct_pipeline` |
-| [Weighted Pipeline Value](#weighted-pipeline-value) | What's the probability-adjusted pipeline? | `marts.fct_pipeline` |
-| [Win Rate](#win-rate) | What % of closed deals do we win? | `marts.fct_deals` |
+| [MRR](#mrr) | Monthly recurring revenue | `marts.fct_revenue` |
+| [ARR](#arr) | Annualized recurring revenue | `marts.fct_revenue` |
+| [ACV](#acv) | Average annualized deal value | `marts.fct_revenue` |
+| [TCV](#tcv) | Full contract value over its term | `marts.fct_revenue` |
+| [Active MRR](#active-mrr) | MRR excluding churned customers | `marts.fct_revenue` |
+| [Churned MRR](#churned-mrr) | MRR lost to churn | `marts.fct_revenue` |
+| [Open Pipeline Value](#open-pipeline-value) | Sum of open-deal value | `marts.fct_pipeline` |
+| [Weighted Pipeline Value](#weighted-pipeline-value) | Probability-adjusted pipeline | `marts.fct_pipeline` |
+| [Win Rate](#win-rate) | Closed-won as a share of closed deals | `marts.fct_deals` |
 | [Lead → MQL Rate](#lead--mql-rate) | Of leads, how many become MQLs? | `marts.fct_funnel` |
 | [MQL → SQL Rate](#mql--sql-rate) | Of MQLs, how many become SQLs? | `marts.fct_funnel` |
 | [SQL → Customer Rate](#sql--customer-rate) | Of SQLs, how many close? | `marts.fct_funnel` |
@@ -86,7 +86,7 @@ The portion of total MRR from subscriptions still in active status.
 
 - **Formula:** `Active MRR = SUM(mrr_usd WHERE is_churned = FALSE)`
 - **Source:** derived from `fct_revenue` row-by-row (no stored column)
-- **Why it matters:** this is what an exec means when they say "what's our MRR?",
+- **Why it matters:** this is what an exec means when they ask for "current MRR",
   the running-business number, not the cumulative booked number.
 
 ### Churned MRR
@@ -144,9 +144,9 @@ Closed-won deals divided by all closed deals.
 ## Funnel metrics
 
 Sourced from `marts.fct_funnel`. Event grain: one row per (contact, lifecycle
-stage entry). Event grain is what lets us answer time-windowed questions like
+stage entry). Event grain is what enables time-windowed questions like
 *"Of leads from March, what % became MQL within 90 days?"*, which a snapshot of
-current state cannot.
+current state cannot answer.
 
 ### Lead → MQL Rate
 

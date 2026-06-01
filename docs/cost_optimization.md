@@ -23,7 +23,7 @@ anything fancy.
 
 ---
 
-## What we actually did
+## Cost levers applied
 
 ### 1. Single X-Small warehouse, auto-suspend at 60s
 
@@ -37,18 +37,18 @@ CREATE WAREHOUSE IF NOT EXISTS REVOPS_WH
   SCALING_POLICY = 'ECONOMY';
 ```
 
-**Why XS**: at our data volumes (~200 deals, ~150 contacts), even the dbt
-test suite of 103 tests + the full DAG build completes in ~20 seconds on XS.
-We'd pay for Small or larger compute but get the same throughput because
-the bottleneck isn't compute parallelism; it's Snowflake's per-query
+**Why XS**: at this project's data volumes (~200 deals, ~150 contacts), even
+the dbt test suite of 103 tests + the full DAG build completes in ~20 seconds
+on XS. A Small or larger warehouse would cost more for the same throughput
+because the bottleneck isn't compute parallelism; it's Snowflake's per-query
 metadata + planning latency.
 
 **Why 60s auto-suspend**: the daily pipeline runs once per day and finishes
 in ~3 minutes. With 60s auto-suspend, the warehouse is up for ~4 minutes
-total per pipeline run. With 600s auto-suspend (the default), we'd add
-10 minutes of paid-for idle to every cron, which is six free minutes for
-the human to think; but the human isn't there at 06:00 UTC. **60s saves
-credits with zero downside in our usage pattern.**
+total per pipeline run. With 600s auto-suspend (the default), every cron
+would add 10 minutes of paid-for idle, which is six free minutes for a
+human to think; but no human is there at 06:00 UTC. **60s saves credits
+with zero downside for this usage pattern.**
 
 **Why ECONOMY scaling policy**: tells Snowflake to be patient about
 auto-scaling under load. We're never under high concurrent load (one cron
@@ -73,7 +73,7 @@ helps pruning. `dim_accounts`, `dim_contacts`, `fct_pipeline`,
 `fct_account_health` are queried at portfolio scale (~50–200 rows total),
 so clustering adds maintenance cost without scan reduction.
 
-**Honest scale caveat**: at our row counts (41 revenue rows, 200 deals),
+**Honest scale caveat**: at these row counts (41 revenue rows, 200 deals),
 the data fits in a single micropartition. Clustering is **demonstrative**
 here: it's the pattern an interviewer would want to see, not a measurable
 performance win. At 100M rows, clustering by `metric_month` would let a
@@ -191,8 +191,8 @@ trending up or down.
 
 ### Before: `dim_accounts` had a fan-out problem
 
-In an early version of `dim_accounts.sql`, we built per-company rollups
-inline using direct JOINs:
+An early version of `dim_accounts.sql` built per-company rollups inline
+using direct JOINs:
 
 ```sql
 -- BAD: company joins to deals (1:N) and contacts (1:N) in the same query.
@@ -254,7 +254,7 @@ LEFT JOIN contact_rollup ct USING (company_id);
 - The intermediate result size is bounded by `len(companies) × 3` instead
   of `len(deals) × len(contacts_per_company)`.
 
-**Cost impact at our scale**: negligible (~600 rows → ~150 rows in the
+**Cost impact at this scale**: negligible (~600 rows → ~150 rows in the
 intermediate result). **Cost impact at 10,000 companies × 50 deals × 50
 contacts average**: 25M-row intermediate becomes 30k-row intermediate.
 ~800x reduction in working memory + scan cost.
@@ -288,7 +288,7 @@ the entire pipeline at this scale. Well inside the free trial allocation.
 
 ---
 
-## What we'd do differently at scale
+## Scale-up changes (what would change at 1000x data)
 
 If this project's data grew 1000x (real-world enterprise CRM):
 
@@ -307,7 +307,7 @@ If this project's data grew 1000x (real-world enterprise CRM):
 4. **Query-tag every dbt run** with the model name (`dbt_project.yml`
    has a `query-comment` hook) so `query_history` can attribute
    credits to specific models. This makes the QUERY_HISTORY query
-   above 10x more useful: "which model costs us the most" is the
+   above 10x more useful: "which model costs the most" is the
    first question an engineering manager asks.
 5. **Materialized views** on the most-queried mart aggregates if the
    workload warrants. Snowflake's materialized views auto-refresh and

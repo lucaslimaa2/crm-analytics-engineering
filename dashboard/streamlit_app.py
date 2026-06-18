@@ -23,6 +23,8 @@ Streamlit Community Cloud deploy:
 """
 from __future__ import annotations
 
+import os
+
 import pandas as pd
 import plotly.express as px
 import snowflake.connector
@@ -34,17 +36,31 @@ st.set_page_config(
     layout="wide",
 )
 
+
+def _secret(key: str) -> str:
+    """Read a credential from whichever source the current host provides.
+
+    Hugging Face Spaces exposes secrets as environment variables.
+    Streamlit Community Cloud + local dev use st.secrets (loaded from
+    .streamlit/secrets.toml). Check env first, fall back to st.secrets.
+    """
+    val = os.environ.get(key)
+    if val:
+        return val
+    return st.secrets[key]
+
+
 # ─── Snowflake connection ──────────────────────────────────────────────────
 
 @st.cache_resource
 def get_conn():
     """One Snowflake connection per session, reused across queries."""
     return snowflake.connector.connect(
-        account   = st.secrets["SNOWFLAKE_ACCOUNT"],
-        user      = st.secrets["SNOWFLAKE_USER_REPORTER"],
-        password  = st.secrets["SNOWFLAKE_PASSWORD_REPORTER"],
-        warehouse = st.secrets["SNOWFLAKE_WAREHOUSE"],
-        database  = st.secrets["SNOWFLAKE_DATABASE"],
+        account   = _secret("SNOWFLAKE_ACCOUNT"),
+        user      = _secret("SNOWFLAKE_USER_REPORTER"),
+        password  = _secret("SNOWFLAKE_PASSWORD_REPORTER"),
+        warehouse = _secret("SNOWFLAKE_WAREHOUSE"),
+        database  = _secret("SNOWFLAKE_DATABASE"),
         role      = "REVOPS_REPORTER",
         schema    = "MARTS",
     )
